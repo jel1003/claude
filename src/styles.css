@@ -1,0 +1,468 @@
+:root {
+  --bg: #f7f5f1;
+  --surface: #ffffff;
+  --surface-2: #f2efe9;
+  --border: #e3ded4;
+  --text: #23201c;
+  --text-dim: #6f685e;
+  --accent: #e0662a;
+  --accent-soft: #fdeee4;
+  --ready: #2f8a4f;
+  --ready-soft: #e6f4ea;
+  --almost: #c8891a;
+  --almost-soft: #fbf1de;
+  --lacking: #9a938a;
+  --lacking-soft: #f0ede8;
+  --danger: #c0402f;
+  --radius: 14px;
+  --shadow: 0 1px 2px rgb(35 32 28 / 6%), 0 8px 24px rgb(35 32 28 / 5%);
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #17161a;
+    --surface: #212027;
+    --surface-2: #2a2932;
+    --border: #37363f;
+    --text: #eceaf0;
+    --text-dim: #a19eaa;
+    --accent: #ff8b4c;
+    --accent-soft: #3a2519;
+    --ready: #6ed08e;
+    --ready-soft: #1e3527;
+    --almost: #e6bd6a;
+    --almost-soft: #37301c;
+    --lacking: #8b8794;
+    --lacking-soft: #2b2a33;
+    --danger: #ff7a68;
+    --shadow: 0 1px 2px rgb(0 0 0 / 30%), 0 8px 24px rgb(0 0 0 / 25%);
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo',
+    'Segoe UI', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+button { font: inherit; cursor: pointer; }
+
+.app {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 28px 20px 80px;
+}
+
+/* ── 헤더 ───────────────────────────────────────────── */
+.site-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.site-header h1 {
+  margin: 0;
+  font-size: 26px;
+  letter-spacing: -0.02em;
+}
+
+.site-header .date {
+  color: var(--text-dim);
+  font-size: 14px;
+  margin: 2px 0 0;
+}
+
+.header-actions { display: flex; gap: 8px; align-items: center; }
+
+/* ── 레이아웃 ───────────────────────────────────────── */
+.layout {
+  display: grid;
+  grid-template-columns: minmax(300px, 380px) 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .layout { grid-template-columns: 1fr; }
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 18px;
+}
+
+.card + .card { margin-top: 18px; }
+
+.card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.card-head h2 {
+  margin: 0;
+  font-size: 17px;
+  letter-spacing: -0.01em;
+}
+
+.card-head .sub { color: var(--text-dim); font-size: 13px; }
+
+/* ── 버튼 ───────────────────────────────────────────── */
+.btn {
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 7px 14px;
+  font-size: 13px;
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+}
+
+.btn:hover { border-color: var(--accent); }
+.btn:active { transform: translateY(1px); }
+
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.btn-primary:hover { filter: brightness(1.06); }
+
+.btn-ghost { background: transparent; }
+
+.btn-tiny { padding: 3px 9px; font-size: 12px; }
+
+/* ── 냉장고 ─────────────────────────────────────────── */
+.search-row { display: flex; gap: 8px; margin-bottom: 12px; }
+
+.search-row input {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+}
+
+.search-row input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+
+.category { margin-bottom: 14px; }
+
+.category h3 {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+}
+
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.chip {
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-dim);
+  border-radius: 999px;
+  padding: 5px 11px;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.13s;
+}
+
+.chip:hover { border-color: var(--accent); color: var(--text); }
+
+.chip.on {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.chip .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.chip.expiring { border-color: var(--danger); color: var(--danger); }
+.chip.expiring .dot { background: var(--danger); }
+
+.fridge-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border);
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+/* ── 유통기한 목록 ──────────────────────────────────── */
+.expiry-list { list-style: none; margin: 0; padding: 0; font-size: 13px; }
+
+.expiry-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.expiry-list li:last-child { border-bottom: none; }
+.expiry-list .name { flex: 1; }
+
+.expiry-list input[type='date'] {
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 3px 6px;
+  font: inherit;
+  font-size: 12px;
+}
+
+.days-left { font-size: 12px; color: var(--text-dim); white-space: nowrap; }
+.days-left.warn { color: var(--danger); font-weight: 600; }
+
+/* ── 식단 ───────────────────────────────────────────── */
+.plan-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 720px) {
+  .plan-grid { grid-template-columns: 1fr; }
+}
+
+.meal {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 13px;
+  background: var(--surface-2);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+  width: 100%;
+  transition: border-color 0.15s;
+}
+
+.meal:hover { border-color: var(--accent); }
+
+.meal .slot {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+  font-weight: 600;
+}
+
+.meal .name { font-size: 16px; font-weight: 600; letter-spacing: -0.01em; }
+.meal .meta { font-size: 12px; color: var(--text-dim); }
+
+.plan-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border);
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+.plan-summary b { color: var(--text); font-weight: 600; }
+
+.empty {
+  color: var(--text-dim);
+  font-size: 14px;
+  padding: 18px;
+  text-align: center;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+}
+
+/* ── 추천 목록 ──────────────────────────────────────── */
+.filter-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+
+.recipe-list { display: grid; gap: 10px; }
+
+.recipe-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 13px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-2);
+  width: 100%;
+  text-align: left;
+  transition: border-color 0.15s, transform 0.1s;
+}
+
+.recipe-row:hover { border-color: var(--accent); }
+.recipe-row:active { transform: translateY(1px); }
+
+.recipe-row .body { flex: 1; min-width: 0; }
+
+.recipe-row .title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.recipe-row .title strong { font-size: 15px; letter-spacing: -0.01em; }
+.recipe-row .summary { font-size: 13px; color: var(--text-dim); margin-top: 2px; }
+
+.recipe-row .missing {
+  font-size: 12px;
+  margin-top: 6px;
+  color: var(--almost);
+}
+
+.recipe-row .subs { font-size: 12px; margin-top: 4px; color: var(--text-dim); }
+
+.gauge {
+  width: 42px;
+  height: 42px;
+  flex: none;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 700;
+  background: var(--lacking-soft);
+  color: var(--lacking);
+}
+
+.gauge.ready { background: var(--ready-soft); color: var(--ready); }
+.gauge.almost { background: var(--almost-soft); color: var(--almost); }
+
+.badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--lacking-soft);
+  color: var(--lacking);
+  white-space: nowrap;
+}
+
+.badge.ready { background: var(--ready-soft); color: var(--ready); }
+.badge.almost { background: var(--almost-soft); color: var(--almost); }
+.badge.expiring { background: var(--accent-soft); color: var(--accent); }
+
+/* ── 장보기 ─────────────────────────────────────────── */
+.shopping { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.shopping .item {
+  border: 1px dashed var(--border);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 13px;
+  background: var(--surface-2);
+}
+
+/* ── 설정 ───────────────────────────────────────────── */
+.settings { display: grid; gap: 10px; font-size: 14px; }
+
+.settings label {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--text-dim);
+}
+
+.settings label span { color: var(--text); }
+
+.settings input[type='time'],
+.settings input[type='number'] {
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 4px 8px;
+  font: inherit;
+  font-size: 13px;
+}
+
+.settings .hint { font-size: 12px; color: var(--text-dim); margin: 0; }
+
+/* ── 상세 모달 ──────────────────────────────────────── */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgb(20 18 16 / 45%);
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  z-index: 20;
+}
+
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  max-width: 560px;
+  width: 100%;
+  max-height: 85vh;
+  overflow: auto;
+  padding: 22px;
+  box-shadow: var(--shadow);
+}
+
+.modal h2 { margin: 0 0 4px; font-size: 20px; }
+.modal .summary { color: var(--text-dim); font-size: 14px; margin: 0 0 14px; }
+
+.modal h3 {
+  font-size: 13px;
+  letter-spacing: 0.05em;
+  color: var(--text-dim);
+  margin: 18px 0 8px;
+}
+
+.modal ol, .modal ul { margin: 0; padding-left: 20px; }
+.modal ol li { margin-bottom: 6px; }
+
+.ing-line { display: flex; gap: 8px; align-items: baseline; padding: 3px 0; }
+.ing-line .amount { color: var(--text-dim); font-size: 13px; }
+.ing-line.miss { color: var(--danger); }
+.ing-line .mark { font-size: 12px; width: 16px; flex: none; }
+
+.modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+
+.visually-hidden {
+  position: absolute;
+  width: 1px; height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

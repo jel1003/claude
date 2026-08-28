@@ -1,0 +1,27 @@
+{
+  "name": "fridge-chef",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "냉장고 재료를 체크하면 만들 수 있는 메뉴를 추천하고, 매일 아침 그날의 식단을 자동으로 짜주는 웹앱",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.5",
+    "vitest": "^3.2.7"
+  }
+}
