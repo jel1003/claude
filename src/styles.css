@@ -248,6 +248,19 @@ button { font: inherit; cursor: pointer; }
   color: var(--text-dim);
 }
 
+.save-state { color: var(--ready); }
+.save-state.blocked { color: var(--danger); font-weight: 600; }
+
+.notice {
+  margin: 10px 0 0;
+  padding: 9px 12px;
+  border: 1px solid var(--danger);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--danger);
+  font-size: 12.5px;
+}
+
 /* ── 유통기한 목록 ──────────────────────────────────── */
 .expiry-list { list-style: none; margin: 0; padding: 0; font-size: 13px; }
 

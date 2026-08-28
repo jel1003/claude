@@ -40,12 +40,14 @@ function read<T>(key: string, fallback: T): T {
   }
 }
 
-function write(key: string, value: unknown): void {
-  if (typeof localStorage === 'undefined') return
+/** 저장에 성공했으면 true. 사생활 보호 모드 등에서는 false 가 나올 수 있다 */
+function write(key: string, value: unknown): boolean {
+  if (typeof localStorage === 'undefined') return false
   try {
     localStorage.setItem(key, JSON.stringify(value))
+    return true
   } catch {
-    // 사생활 보호 모드 등에서 저장이 막힐 수 있다. 화면 동작은 그대로 유지한다.
+    return false
   }
 }
 
@@ -54,8 +56,8 @@ export function loadFridge(): FridgeItem[] {
   return Array.isArray(items) ? items.filter((item) => typeof item?.id === 'string') : []
 }
 
-export function saveFridge(items: readonly FridgeItem[]): void {
-  write(STORAGE_KEYS.fridge, items)
+export function saveFridge(items: readonly FridgeItem[]): boolean {
+  return write(STORAGE_KEYS.fridge, items)
 }
 
 export type PlanArchive = Record<string, DayPlan>
@@ -65,16 +67,16 @@ export function loadPlans(): PlanArchive {
   return plans && typeof plans === 'object' ? plans : {}
 }
 
-export function savePlans(plans: PlanArchive): void {
-  write(STORAGE_KEYS.plans, plans)
+export function savePlans(plans: PlanArchive): boolean {
+  return write(STORAGE_KEYS.plans, plans)
 }
 
 export function loadSettings(): Settings {
   return { ...DEFAULT_SETTINGS, ...read<Partial<Settings>>(STORAGE_KEYS.settings, {}) }
 }
 
-export function saveSettings(settings: Settings): void {
-  write(STORAGE_KEYS.settings, settings)
+export function saveSettings(settings: Settings): boolean {
+  return write(STORAGE_KEYS.settings, settings)
 }
 
 /** 오래된 식단 기록은 정리한다 (최근 keep 일치만 남김) */

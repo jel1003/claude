@@ -3,6 +3,11 @@ import { CATEGORY_ORDER, INGREDIENTS, INGREDIENT_BY_ID } from '../data/ingredien
 import { addDays, daysBetween } from '../core/date'
 import type { FridgeItem, Ingredient } from '../core/types'
 
+/** 저장 시각을 HH:MM 으로 */
+function clock(date: Date): string {
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+}
+
 interface Props {
   fridge: FridgeItem[]
   today: string
@@ -10,6 +15,10 @@ interface Props {
   onSetExpiry: (id: string, expiresAt: string | undefined) => void
   onClear: () => void
   expiringWithinDays: number
+  /** 마지막 저장 시각 */
+  savedAt: Date | null
+  /** 브라우저가 저장을 막고 있는지 */
+  storageBlocked: boolean
 }
 
 export default function FridgePanel({
@@ -19,6 +28,8 @@ export default function FridgePanel({
   onSetExpiry,
   onClear,
   expiringWithinDays,
+  savedAt,
+  storageBlocked,
 }: Props) {
   const [query, setQuery] = useState('')
   const [showPantry, setShowPantry] = useState(false)
@@ -102,11 +113,25 @@ export default function FridgePanel({
         ))}
 
         <div className="fridge-summary">
-          <span>체크한 재료 {fridge.length}개</span>
+          <span>
+            체크한 재료 {fridge.length}개
+            {storageBlocked ? (
+              <span className="save-state blocked"> · 저장 안 됨</span>
+            ) : (
+              <span className="save-state"> · 자동 저장됨{savedAt ? ` ${clock(savedAt)}` : ''}</span>
+            )}
+          </span>
           <button className="btn btn-ghost btn-tiny" onClick={() => setShowPantry((v) => !v)}>
             {showPantry ? '양념·상비 숨기기' : '양념·상비 보기'}
           </button>
         </div>
+
+        {storageBlocked && (
+          <p className="notice">
+            브라우저가 저장을 막고 있어서 재료가 남지 않습니다. 시크릿 모드이거나 사이트 데이터
+            저장이 꺼져 있는지 확인해 주세요.
+          </p>
+        )}
       </section>
 
       <section className="card">

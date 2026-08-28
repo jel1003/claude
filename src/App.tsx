@@ -31,13 +31,25 @@ export default function App() {
   const [plans, setPlans] = useState<PlanArchive>(loadPlans)
   const [settings, setSettings] = useState<Settings>(loadSettings)
   const [detail, setDetail] = useState<MatchResult | null>(null)
+  /** 마지막으로 냉장고를 저장한 시각. null 이면 아직 저장한 적이 없다 */
+  const [savedAt, setSavedAt] = useState<Date | null>(null)
+  /** 브라우저가 저장을 막고 있으면 true — 사용자에게 알려줘야 한다 */
+  const [storageBlocked, setStorageBlocked] = useState(false)
   const [notifyPermission, setNotifyPermission] = useState<NotificationPermission | 'unsupported'>(
     () => (typeof Notification === 'undefined' ? 'unsupported' : Notification.permission),
   )
 
-  useEffect(() => saveFridge(fridge), [fridge])
-  useEffect(() => savePlans(plans), [plans])
-  useEffect(() => saveSettings(settings), [settings])
+  useEffect(() => {
+    const ok = saveFridge(fridge)
+    setStorageBlocked(!ok)
+    if (ok) setSavedAt(new Date())
+  }, [fridge])
+  useEffect(() => {
+    savePlans(plans)
+  }, [plans])
+  useEffect(() => {
+    saveSettings(settings)
+  }, [settings])
 
   const matchOptions = useMemo(
     () => ({
@@ -156,6 +168,8 @@ export default function App() {
             onSetExpiry={setExpiry}
             onClear={() => setFridge([])}
             expiringWithinDays={EXPIRING_WITHIN_DAYS}
+            savedAt={savedAt}
+            storageBlocked={storageBlocked}
           />
           <SettingsCard
             settings={settings}

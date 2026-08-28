@@ -75,6 +75,23 @@ src/
 tests/             vitest (44개)
 ```
 
+## 배포 (Netlify)
+
+`netlify.toml`에 빌드 설정이 들어 있어서, Netlify에서 이 저장소를 연결하면 그대로 빌드됩니다.
+
+- 빌드 명령: `npm run build` / 배포 디렉터리: `dist` / Node 22
+- SPA라 모든 경로를 `index.html`로 돌려주고, `/assets/*`는 파일명에 해시가 붙으므로 영구 캐시합니다.
+
+Netlify 대시보드에서 **Add new project → Import an existing project → GitHub**로 이 저장소를 고르면
+설정은 `netlify.toml`에서 자동으로 읽고, 이후에는 푸시할 때마다 자동 배포됩니다.
+
+로컬에서 한 번만 올리려면:
+
+```bash
+npm run build
+npx netlify deploy --prod --dir=dist
+```
+
 ## 재료·레시피 추가하기
 
 1. `src/data/ingredients.ts`에 재료를 추가합니다. `freshDays`를 적으면 체크할 때 유통기한이 자동으로 채워지고,
