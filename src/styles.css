@@ -19,8 +19,11 @@
   color-scheme: light dark;
 }
 
+/* 다크 팔레트는 두 곳에서 같은 토큰을 정의한다.
+   - OS가 다크지만 페이지에 명시적 테마가 찍히지 않은 경우 (아티팩트 기본 상태)
+   - 뷰어가 다크를 직접 고른 경우 (:root[data-theme="dark"]) */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme='light']) {
     --bg: #17161a;
     --surface: #212027;
     --surface-2: #2a2932;
@@ -37,7 +40,28 @@
     --lacking-soft: #2b2a33;
     --danger: #ff7a68;
     --shadow: 0 1px 2px rgb(0 0 0 / 30%), 0 8px 24px rgb(0 0 0 / 25%);
+    color-scheme: dark;
   }
+}
+
+:root[data-theme='dark'] {
+  --bg: #17161a;
+  --surface: #212027;
+  --surface-2: #2a2932;
+  --border: #37363f;
+  --text: #eceaf0;
+  --text-dim: #a19eaa;
+  --accent: #ff8b4c;
+  --accent-soft: #3a2519;
+  --ready: #6ed08e;
+  --ready-soft: #1e3527;
+  --almost: #e6bd6a;
+  --almost-soft: #37301c;
+  --lacking: #8b8794;
+  --lacking-soft: #2b2a33;
+  --danger: #ff7a68;
+  --shadow: 0 1px 2px rgb(0 0 0 / 30%), 0 8px 24px rgb(0 0 0 / 25%);
+  color-scheme: dark;
 }
 
 * { box-sizing: border-box; }

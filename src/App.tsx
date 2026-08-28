@@ -114,7 +114,10 @@ export default function App() {
 
   const requestNotify = useCallback(() => {
     if (typeof Notification === 'undefined') return
-    void Notification.requestPermission().then(setNotifyPermission)
+    // 임베드 환경에서는 권한 요청 자체가 거절될 수 있다 — 화면은 그대로 두고 상태만 반영한다
+    void Notification.requestPermission()
+      .then(setNotifyPermission)
+      .catch(() => setNotifyPermission('denied'))
   }, [])
 
   const checkAllPantry = useCallback(() => {
