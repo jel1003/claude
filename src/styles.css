@@ -453,6 +453,63 @@ button { font: inherit; cursor: pointer; }
 
 .settings .hint { font-size: 12px; color: var(--text-dim); margin: 0; }
 
+/* ── 동기화 ─────────────────────────────────────────── */
+.sync-code {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+  margin-bottom: 10px;
+}
+
+.sync-code code {
+  flex: 1;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 16px;
+  letter-spacing: 0.08em;
+  color: var(--text);
+}
+
+.sync-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin-right: 6px;
+  background: var(--lacking);
+}
+
+.sync-dot.idle { background: var(--ready); }
+.sync-dot.syncing { background: var(--almost); }
+.sync-dot.error { background: var(--danger); }
+
+.sync-actions { display: flex; gap: 8px; }
+
+.sync-join {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--border);
+}
+
+.sync-join label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+}
+
+.sync-join .search-row input {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.06em;
+}
+
+.sync-join .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
 /* ── 상세 모달 ──────────────────────────────────────── */
 .modal-backdrop {
   position: fixed;

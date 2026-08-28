@@ -73,6 +73,8 @@ export interface FridgeItem {
   id: string
   /** 담은 날짜 (YYYY-MM-DD) */
   addedAt: string
+  /** 마지막으로 손댄 시각 (ISO). 기기 간 병합에서 어느 쪽이 최신인지 가린다 */
+  updatedAt?: string
   /** 유통기한 (YYYY-MM-DD). 없으면 기한을 따지지 않는다 */
   expiresAt?: string
 }

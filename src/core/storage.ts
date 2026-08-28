@@ -1,11 +1,15 @@
 import type { DayPlan, FridgeItem } from './types'
+import type { Tombstone } from './sync'
 
 const PREFIX = 'fridge-chef.v1'
 
 export const STORAGE_KEYS = {
   fridge: `${PREFIX}.fridge`,
+  tombstones: `${PREFIX}.tombstones`,
   plans: `${PREFIX}.plans`,
   settings: `${PREFIX}.settings`,
+  syncCode: `${PREFIX}.syncCode`,
+  settingsUpdatedAt: `${PREFIX}.settingsUpdatedAt`,
 } as const
 
 export interface Settings {
@@ -58,6 +62,35 @@ export function loadFridge(): FridgeItem[] {
 
 export function saveFridge(items: readonly FridgeItem[]): boolean {
   return write(STORAGE_KEYS.fridge, items)
+}
+
+export function loadTombstones(): Tombstone[] {
+  const stones = read<Tombstone[]>(STORAGE_KEYS.tombstones, [])
+  return Array.isArray(stones) ? stones.filter((s) => typeof s?.id === 'string') : []
+}
+
+export function saveTombstones(stones: readonly Tombstone[]): boolean {
+  return write(STORAGE_KEYS.tombstones, stones)
+}
+
+/** 이 기기가 쓰는 동기화 코드. 동기화 문서에는 넣지 않는다 */
+export function loadSyncCode(): string | null {
+  const code = read<string | null>(STORAGE_KEYS.syncCode, null)
+  return typeof code === 'string' && code ? code : null
+}
+
+export function saveSyncCode(code: string | null): boolean {
+  return write(STORAGE_KEYS.syncCode, code)
+}
+
+/** 설정을 마지막으로 바꾼 시각 — 기기 간 병합에서 어느 쪽이 최신인지 가린다 */
+export function loadSettingsUpdatedAt(): string | null {
+  const at = read<string | null>(STORAGE_KEYS.settingsUpdatedAt, null)
+  return typeof at === 'string' && at ? at : null
+}
+
+export function saveSettingsUpdatedAt(at: string): boolean {
+  return write(STORAGE_KEYS.settingsUpdatedAt, at)
 }
 
 export type PlanArchive = Record<string, DayPlan>
