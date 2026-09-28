@@ -551,6 +551,36 @@ export function formatSummary(answers, result) {
 }
 
 /** 화면의 '예시로 채워보기'용 샘플 응답 */
+/** 농도별 기본 부향률 (중량 %). 실제 레시피 초안에 쓴다. */
+export const STRENGTH_DEFAULT = { edc: 4, edt: 10, edp: 18, extrait: 25 }
+
+const round2 = (n) => Math.round(n * 100) / 100
+
+/**
+ * 추천 처방을 g 단위 레시피 초안으로 바꾼다.
+ * 향료 총량 = 완성 중량 × 부향률. 이것을 탑 · 미들 · 베이스 추천 비율로 나누고,
+ * 같은 층의 노트끼리는 똑같이 나눈다. 0.01g 단위로 반올림하고 끝자리는 마지막 노트가 맞춘다.
+ */
+export function suggestRecipe(prescription, totalG, strengthPct) {
+  const strength = strengthPct || STRENGTH_DEFAULT[prescription.concentration] || 18
+  const oil = round2((totalG * strength) / 100)
+  const layers = ['top', 'middle', 'base'].filter((l) => prescription[l]?.length)
+  const ratioSum = layers.reduce((sum, l) => sum + (prescription.ratio?.[l] || 0), 0)
+  const ingredients = []
+  for (const layer of layers) {
+    const share = ratioSum ? (prescription.ratio[layer] || 0) / ratioSum : 1 / layers.length
+    const each = (oil * share) / prescription[layer].length
+    for (const id of prescription[layer]) {
+      ingredients.push({ name: NOTES.find((n) => n.id === id)?.ko ?? id, layer, grams: round2(each) })
+    }
+  }
+  if (ingredients.length) {
+    const last = ingredients[ingredients.length - 1]
+    last.grams = round2(last.grams + oil - ingredients.reduce((sum, g) => sum + g.grams, 0))
+  }
+  return { strengthPct: strength, oilG: oil, ingredients }
+}
+
 export function sampleAnswers() {
   return {
     ...emptyAnswers(),

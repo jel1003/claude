@@ -56,13 +56,12 @@ export interface StoredResponse {
 }
 
 export const RECIPE_LAYERS = ['', 'top', 'middle', 'base'] as const
-export const RECIPE_UNITS = ['drop', 'g', 'ml'] as const
 
 export interface RecipeIngredient {
   name: string
   layer: (typeof RECIPE_LAYERS)[number]
-  amount: number
-  unit: (typeof RECIPE_UNITS)[number]
+  /** 양 (g) */
+  grams: number
 }
 
 export interface CustomerRecipe {
@@ -70,9 +69,9 @@ export interface CustomerRecipe {
   label: string
   /** 만든 날 YYYY-MM-DD */
   madeAt: string
-  /** 완성 용량 (ml) */
-  volumeMl: number
-  /** 부향률 (%) */
+  /** 완성 중량 (g, 향료 + 에탄올) */
+  totalG: number
+  /** 부향률 (중량 %) */
   strengthPct: number
   ingredients: RecipeIngredient[]
   memo: string
@@ -159,15 +158,14 @@ export function sanitizeRecipes(raw: unknown, now = new Date().toISOString()): C
     .map((r) => ({
       label: text(r.label, 60),
       madeAt: typeof r.madeAt === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(r.madeAt) ? r.madeAt : '',
-      volumeMl: num(r.volumeMl, 1000),
+      totalG: num(r.totalG, 10000),
       strengthPct: num(r.strengthPct, 100),
       ingredients: (Array.isArray(r.ingredients) ? r.ingredients : [])
         .filter(isObj)
         .map((g) => ({
           name: text(g.name, 80),
           layer: oneOf(g.layer, RECIPE_LAYERS, ''),
-          amount: num(g.amount, 100000),
-          unit: oneOf(g.unit, RECIPE_UNITS, 'drop'),
+          grams: num(g.grams, 10000),
         }))
         .filter((g) => g.name)
         .slice(0, MAX_INGREDIENTS),

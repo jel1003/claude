@@ -10,6 +10,7 @@ import {
   emptyAnswers,
   formatSummary,
   layerRatio,
+  suggestRecipe,
   recommendConcentration,
   sampleAnswers,
 } from '../public/perfume-survey/engine.js'
@@ -137,5 +138,34 @@ describe('비율과 농도', () => {
     a.longevity = 5
     a.concentration = 'edc'
     expect(recommendConcentration(a)).toMatchObject({ id: 'edc', reason: '고객이 직접 고른 농도' })
+  })
+})
+
+describe('실제 레시피 초안 (g)', () => {
+  const prescription = {
+    top: ['bergamot', 'lemon'],
+    middle: ['rose'],
+    base: ['cedar', 'musk', 'amber'],
+    ratio: { top: 30, middle: 40, base: 30 },
+    concentration: 'edp',
+  }
+
+  it('완성 중량 × 부향률을 층별 추천 비율로 나눈다', () => {
+    const r = suggestRecipe(prescription, 30)
+    expect(r.strengthPct).toBe(18)
+    expect(r.oilG).toBe(5.4)
+    const sum = (layer: string) => r.ingredients.filter((g) => g.layer === layer).reduce((s, g) => s + g.grams, 0)
+    expect(sum('top')).toBeCloseTo(1.62, 2)
+    expect(sum('middle')).toBeCloseTo(2.16, 2)
+    expect(sum('base')).toBeCloseTo(1.62, 2)
+    expect(r.ingredients.reduce((s, g) => s + g.grams, 0)).toBeCloseTo(5.4, 5)
+    expect(r.ingredients[0]).toEqual({ name: '베르가못', layer: 'top', grams: 0.81 })
+  })
+
+  it('부향률을 직접 주면 그 값을 쓰고, 비어 있는 층은 건너뛴다', () => {
+    const r = suggestRecipe({ ...prescription, middle: [] }, 50, 10)
+    expect(r.oilG).toBe(5)
+    expect(r.ingredients.some((g) => g.layer === 'middle')).toBe(false)
+    expect(r.ingredients.reduce((s, g) => s + g.grams, 0)).toBeCloseTo(5, 5)
   })
 })

@@ -74,3 +74,17 @@ export function recommendConcentration(answers: Answers): Concentration & { reas
 export function sectionProgress(answers: Answers): { done: number; total: number; sections: boolean[] }
 export function analyze(answers: Answers): Result
 export function formatSummary(answers: Answers, result: Result): string
+
+export interface PrescriptionLike {
+  top: string[]
+  middle: string[]
+  base: string[]
+  ratio: Record<Layer, number>
+  concentration: string
+}
+export const STRENGTH_DEFAULT: Record<string, number>
+export function suggestRecipe(
+  prescription: PrescriptionLike,
+  totalG: number,
+  strengthPct?: number,
+): { strengthPct: number; oilG: number; ingredients: { name: string; layer: Layer; grams: number }[] }

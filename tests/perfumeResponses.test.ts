@@ -158,12 +158,12 @@ describe('실제 레시피 기록', () => {
   const recipe = {
     label: '1차 시안',
     madeAt: '2026-09-28',
-    volumeMl: 30,
+    totalG: 25,
     strengthPct: 18,
     ingredients: [
-      { name: '베르가못', layer: 'top', amount: 12, unit: 'drop' },
-      { name: '로즈', layer: 'middle', amount: '8', unit: 'drop' },
-      { name: '', layer: 'base', amount: 3, unit: 'drop' },
+      { name: '베르가못', layer: 'top', grams: 1.2 },
+      { name: '로즈', layer: 'middle', grams: '0.8' },
+      { name: '', layer: 'base', grams: 0.3 },
     ],
     memo: '잔향 조금 더',
     final: true,
@@ -179,7 +179,7 @@ describe('실제 레시피 기록', () => {
     const r = (saved.body.response as StoredResponse).recipes![0]!
     expect(r.label).toBe('1차 시안')
     expect(r.ingredients.map((g) => g.name)).toEqual(['베르가못', '로즈'])
-    expect(r.ingredients[1]!.amount).toBe(8)
+    expect(r.ingredients[1]!.grams).toBe(0.8)
     expect(r.final).toBe(true)
 
     const one = await call(get(`?id=${id}`), store)
@@ -200,10 +200,10 @@ describe('실제 레시피 기록', () => {
 
   it('이상한 값은 걸러낸다', () => {
     const [r] = sanitizeRecipes([
-      { label: 'x', madeAt: '어제', volumeMl: -5, strengthPct: 500, ingredients: [{ name: 'a', layer: 'heart', amount: 'many', unit: 'kg' }], extra: 1 },
+      { label: 'x', madeAt: '어제', totalG: -5, strengthPct: 500, ingredients: [{ name: 'a', layer: 'heart', grams: 'many', unit: 'kg' }], extra: 1 },
     ])
-    expect(r).toMatchObject({ madeAt: '', volumeMl: 0, strengthPct: 100, final: false })
-    expect(r!.ingredients[0]).toEqual({ name: 'a', layer: '', amount: 0, unit: 'drop' })
+    expect(r).toMatchObject({ madeAt: '', totalG: 0, strengthPct: 100, final: false })
+    expect(r!.ingredients[0]).toEqual({ name: 'a', layer: '', grams: 0 })
     expect(r).not.toHaveProperty('extra')
     expect(sanitizeRecipes('nope')).toEqual([])
   })
