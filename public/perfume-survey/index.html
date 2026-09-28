@@ -309,7 +309,7 @@
     <div>
       <nav aria-label="설문 단계"><ol class="steps" id="steps"></ol></nav>
 
-      <form id="survey" novalidate>
+      <form id="survey" novalidate autocomplete="off">
         <section class="q" id="s1">
           <div class="q-head"><span class="num">STEP 1 / 9</span><h2>기본 정보</h2><p>상담을 위한 기본 정보예요.</p></div>
           <div class="field">
@@ -443,7 +443,7 @@
     </aside>
   </div>
 
-  <p class="foot">어코드·향 계열·노트 분류와 지속력·확산력·계절 척도는 Fragrantica 향수 데이터베이스의 분류 방식을 참고했습니다. 처방은 상담을 위한 출발점이며, 실제 배합은 조향사가 시향으로 조정합니다. 작성 중인 답변은 이 브라우저에 임시 저장되고, ‘설문 제출하기’를 눌러야 매장 서버로 전송됩니다.</p>
+  <p class="foot">어코드·향 계열·노트 분류와 지속력·확산력·계절 척도는 Fragrantica 향수 데이터베이스의 분류 방식을 참고했습니다. 처방은 상담을 위한 출발점이며, 실제 배합은 조향사가 시향으로 조정합니다. 작성 중인 답변은 브라우저에 저장되지 않아 새로고침하면 모두 지워지고, ‘설문 제출하기’를 눌러야 매장 서버로 전송됩니다.</p>
 </div>
 
 <script type="module">
@@ -454,23 +454,17 @@
     MAX_REF_PERFUMES, STEP_TITLES, perfumeById, perfumeNoteIds, refPerfumeList, searchPerfumes, skipsTasteSteps,
   } from './engine.js'
 
-  const STORAGE_KEY = 'perfume-survey:v1'
+  // 새로고침하면 처음부터 다시 쓴다. 답변은 이 페이지에만 있고 브라우저에 남기지 않는다
+  // 예전 버전이 남긴 저장분도 지운다.
+  try {
+    localStorage.removeItem('perfume-survey:v1')
+    localStorage.removeItem('perfume-survey:submitted')
+  } catch {}
   const $ = (id) => document.getElementById(id)
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c])
   const accordByKey = Object.fromEntries(ACCORDS.map((a) => [a.key, a]))
 
-  let answers = load()
-
-  function load() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY)
-      if (raw) return { ...emptyAnswers(), ...JSON.parse(raw) }
-    } catch {}
-    return emptyAnswers()
-  }
-  function save() {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(answers)) } catch {}
-  }
+  let answers = emptyAnswers()
 
   /* ---------- 입력 그리기 ---------- */
 
@@ -838,7 +832,7 @@
   /* ---------- 공통 ---------- */
 
   function syncAll() { for (const s of syncers) s() }
-  function changed() { save(); syncAll(); renderResult() }
+  function changed() { syncAll(); renderResult() }
 
   function setStatus(msg) { $('status').textContent = msg }
 
@@ -889,12 +883,10 @@
     $('consent').checked = false
     showReceipt(null)
     submitStatus('')
-    try { localStorage.removeItem(SUBMITTED_KEY) } catch {}
     $('copyFallback').hidden = true
     changed()
     setStatus('응답을 모두 지웠어요.')
   })
-  const SUBMITTED_KEY = 'perfume-survey:submitted'
   function showReceipt(id) {
     $('receipt').hidden = !id
     $('receiptId').textContent = id ?? ''
@@ -927,7 +919,6 @@
       const body = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(body.message || `서버 오류 (${res.status})`)
       showReceipt(body.id)
-      try { localStorage.setItem(SUBMITTED_KEY, body.id) } catch {}
       submitStatus('설문을 보냈어요. 감사합니다!')
     } catch (err) {
       const offline = err instanceof TypeError
@@ -936,7 +927,6 @@
       btn.disabled = false
     }
   })
-  try { showReceipt(localStorage.getItem(SUBMITTED_KEY)) } catch {}
 
   renderSteps()
   pills('forWhom', [{ id: 'self', ko: '나를 위한 향수' }, { id: 'gift', ko: '선물' }], { key: 'forWhom' })
@@ -960,8 +950,13 @@
   pills('gender', GENDER, { key: 'gender', numeric: true })
   for (const id of ['name', 'contact', 'lovedPerfumes', 'dislikedPerfumes', 'allergies', 'memo']) textField(id)
 
+  // 새로고침 때 브라우저가 입력칸 값을 되살리는 경우가 있어 한 번 더 비운다
+  $('survey').reset()
+  $('perfumeSearch').value = ''
   syncAll()
   renderResult()
+  // 뒤로 가기로 돌아온 페이지(bfcache)도 새로 시작한다
+  window.addEventListener('pageshow', (e) => { if (e.persisted) location.reload() })
 </script>
 </body>
 </html>

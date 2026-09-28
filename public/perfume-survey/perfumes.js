@@ -6,7 +6,8 @@
 
 /**
  * @typedef {{ id: string, brand: string, brandKo: string, name: string, nameKo: string, family: string,
- *   top: string[], middle: string[], base: string[], other?: string[], aliases?: string[] }} Perfume
+ *   top: string[], middle: string[], base: string[], other?: string[], aliases?: string[], check?: boolean }} Perfume
+ * check: 노트 정보가 특히 불확실해 공식 설명으로 꼭 확인해야 하는 항목
  */
 
 /** @type {Perfume[]} */
@@ -134,6 +135,18 @@ export const PERFUMES = [
     top: ['lemon', 'apple'], middle: ['jasmine', 'rose'], base: ['cedar', 'white_musk', 'amber'], other: ['벨플라워', '대나무'] },
   { id: 'clean-warm-cotton', brand: 'Clean Reserve', brandKo: '클린', name: 'Warm Cotton', nameKo: '웜 코튼', family: 'musk',
     top: ['lemon', 'mandarin'], middle: ['orange_blossom', 'ozone'], base: ['white_musk', 'amber'], aliases: ['코튼'] },
+  // 한국 브랜드 — 제품 구성과 노트를 공식 설명으로 꼭 확인할 것 (check: true)
+  { id: 'tb-chamo', brand: 'TAMBURINS', brandKo: '탬버린즈', name: 'CHAMO', nameKo: '카모', family: 'aromatic', check: true,
+    top: ['bergamot'], middle: [], base: ['white_musk'], other: ['캐모마일'], aliases: ['탬버린'] },
+  { id: 'tb-berga-sand', brand: 'TAMBURINS', brandKo: '탬버린즈', name: 'BERGA SAND', nameKo: '베르가 샌드', family: 'woody', check: true,
+    top: ['bergamot'], middle: [], base: ['sandalwood', 'white_musk'], aliases: ['탬버린', '베르가샌드'] },
+  { id: 'nf-santal-cream', brand: 'NONFICTION', brandKo: '논픽션', name: 'SANTAL CREAM', nameKo: '상탈 크림', family: 'woody', check: true,
+    top: ['cardamom'], middle: [], base: ['sandalwood', 'vanilla'], other: ['밀크'] },
+  { id: 'nf-gentle-night', brand: 'NONFICTION', brandKo: '논픽션', name: 'GENTLE NIGHT', nameKo: '젠틀 나잇', family: 'musk', check: true,
+    top: [], middle: [], base: ['white_musk'], aliases: ['젠틀나이트'] },
+  { id: 'fm-cotton-hug', brand: 'FORMENT', brandKo: '포맨트', name: 'Cotton Hug', nameKo: '코튼 허그', family: 'musk', check: true,
+    top: [], middle: [], base: ['white_musk'], other: ['코튼'], aliases: ['포멘트', '코튼허그'] },
+
   { id: 'aesop-tacit', brand: 'Aēsop', brandKo: '이솝', name: 'Tacit', nameKo: '테싯', family: 'citrus',
     top: ['yuzu'], middle: ['basil', 'clove'], base: ['vetiver'], aliases: ['태싯'] },
 ]

@@ -106,6 +106,7 @@ export interface Perfume {
   base: string[]
   other?: string[]
   aliases?: string[]
+  check?: boolean
 }
 export const PERFUMES: Perfume[]
 export const perfumeById: Record<string, Perfume>
