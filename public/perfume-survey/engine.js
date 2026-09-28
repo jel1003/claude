@@ -276,6 +276,7 @@ export const ACCORD_RATINGS = [
 export function emptyAnswers() {
   return {
     name: '',
+    contact: '',
     forWhom: '',
     experience: '',
     seasons: [],
@@ -517,6 +518,7 @@ export function formatSummary(answers, result) {
   const lines = []
   const who = answers.name ? `${answers.name} 님` : '고객'
   lines.push(`[조향 상담 요약] ${who}${answers.forWhom === 'gift' ? ' (선물용)' : ''}`)
+  if (answers.contact) lines.push(`연락처: ${answers.contact}`)
   lines.push('')
   if (result.family.primary) {
     const fam = [result.family.primary, result.family.secondary].filter(Boolean).map((f) => `${f.ko} (${f.en})`)
@@ -553,6 +555,7 @@ export function sampleAnswers() {
   return {
     ...emptyAnswers(),
     name: '예시 고객',
+    contact: '010-0000-0000',
     forWhom: 'self',
     experience: 'sometimes',
     seasons: ['spring', 'summer'],

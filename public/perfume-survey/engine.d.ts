@@ -13,6 +13,7 @@ export interface Concentration { id: string; ko: string; range: string; life: st
 
 export interface Answers {
   name: string
+  contact: string
   forWhom: '' | 'self' | 'gift'
   experience: string
   seasons: string[]

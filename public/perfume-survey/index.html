@@ -246,6 +246,16 @@
   .status { font-size: 13px; color: var(--dim); min-height: 1.4em; }
   #copyFallback { width: 100%; min-height: 160px; font: 12px/1.5 var(--mono); }
 
+  .consent { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; cursor: pointer; }
+  .consent input { margin-top: 4px; width: 18px; height: 18px; accent-color: var(--accent); flex: none; }
+  .consent small { display: block; color: var(--dim); font-size: 12.5px; }
+  .hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+  .btn.big { padding: 12px 22px; font-size: 15px; font-weight: 600; }
+  .btn:disabled { opacity: .55; cursor: progress; }
+  #submitStatus.error { color: var(--avoid); }
+  .receipt { display: grid; gap: 2px; padding: 14px 16px; border-radius: 10px; background: var(--accent-soft); font-size: 13.5px; }
+  .receipt .k { font: 500 11px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
+  .receipt b { font: 500 20px var(--mono); letter-spacing: .02em; user-select: all; }
   .foot { margin-top: 28px; font-size: 12.5px; color: var(--dim); max-width: 70ch; }
 
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
@@ -269,6 +279,10 @@
           <div class="field">
             <label class="label" for="name">성함 또는 닉네임 <small>선택</small></label>
             <input type="text" id="name" autocomplete="name" placeholder="예: 김향기" />
+          </div>
+          <div class="field">
+            <label class="label" for="contact">연락처 <small>시향 샘플 안내를 받을 전화번호나 이메일</small></label>
+            <input type="text" id="contact" autocomplete="email" placeholder="예: 010-1234-5678" />
           </div>
           <div class="field"><span class="label">누구를 위한 향수인가요?</span><div class="pills" id="forWhom"></div></div>
           <div class="field"><span class="label">향수를 얼마나 쓰시나요?</span><div class="pills" id="experience"></div></div>
@@ -322,6 +336,24 @@
           <div class="field"><label class="label" for="allergies">알레르기 · 피해야 할 성분</label><input type="text" id="allergies" placeholder="예: 리날룰, 참나무이끼(오크모스)" /></div>
           <div class="field"><label class="label" for="memo">그 밖에 전하고 싶은 말</label><textarea id="memo"></textarea></div>
         </section>
+
+        <section class="q submit" id="submitBox">
+          <div class="q-head"><h2>설문 보내기</h2><p>보내 주신 답변으로 조향사가 시향 샘플을 준비합니다.</p></div>
+          <label class="consent" for="consent">
+            <input type="checkbox" id="consent" />
+            <span>성함·연락처와 설문 답변을 맞춤 향수 상담에만 쓰는 데 동의합니다. <small>상담이 끝나면 요청 시 삭제해 드립니다.</small></span>
+          </label>
+          <div class="hp" aria-hidden="true"><label for="website">웹사이트</label><input type="text" id="website" tabindex="-1" autocomplete="off" /></div>
+          <div class="actions">
+            <button type="submit" class="btn primary big" id="submitBtn">설문 제출하기</button>
+          </div>
+          <p class="status" id="submitStatus" role="status"></p>
+          <div class="receipt" id="receipt" hidden>
+            <span class="k">접수번호</span>
+            <b id="receiptId"></b>
+            <span>이 번호를 매장에 알려 주시면 상담 내용을 바로 찾을 수 있어요.</span>
+          </div>
+        </section>
       </form>
     </div>
 
@@ -359,7 +391,7 @@
     </aside>
   </div>
 
-  <p class="foot">어코드·향 계열·노트 분류와 지속력·확산력·계절 척도는 Fragrantica 향수 데이터베이스의 분류 방식을 참고했습니다. 처방은 상담을 위한 출발점이며, 실제 배합은 조향사가 시향으로 조정합니다. 입력한 내용은 이 브라우저에만 임시 저장됩니다.</p>
+  <p class="foot">어코드·향 계열·노트 분류와 지속력·확산력·계절 척도는 Fragrantica 향수 데이터베이스의 분류 방식을 참고했습니다. 처방은 상담을 위한 출발점이며, 실제 배합은 조향사가 시향으로 조정합니다. 작성 중인 답변은 이 브라우저에 임시 저장되고, ‘설문 제출하기’를 눌러야 매장 서버로 전송됩니다.</p>
 </div>
 
 <script type="module">
@@ -637,11 +669,57 @@
   $('resetConfirm').addEventListener('click', () => {
     answers = emptyAnswers()
     $('resetConfirm').hidden = true
+    $('consent').checked = false
+    showReceipt(null)
+    submitStatus('')
+    try { localStorage.removeItem(SUBMITTED_KEY) } catch {}
     $('copyFallback').hidden = true
     changed()
     setStatus('응답을 모두 지웠어요.')
   })
-  $('survey').addEventListener('submit', (e) => e.preventDefault())
+  const SUBMITTED_KEY = 'perfume-survey:submitted'
+  function showReceipt(id) {
+    $('receipt').hidden = !id
+    $('receiptId').textContent = id ?? ''
+  }
+  function submitStatus(msg, isError = false) {
+    $('submitStatus').textContent = msg
+    $('submitStatus').classList.toggle('error', isError)
+  }
+
+  $('survey').addEventListener('submit', async (e) => {
+    e.preventDefault()
+    if (!$('consent').checked) {
+      submitStatus('개인정보 수집에 동의해 주셔야 보낼 수 있어요.', true)
+      $('consent').focus()
+      return
+    }
+    if (analyze(answers).confidence === 'none') {
+      submitStatus('향 계열(4단계)이나 어코드(5단계)를 하나 이상 골라 주세요.', true)
+      return
+    }
+    const btn = $('submitBtn')
+    btn.disabled = true
+    submitStatus('보내는 중…')
+    try {
+      const res = await fetch('/api/perfume-responses', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ answers, consent: true, website: $('website').value }),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body.message || `서버 오류 (${res.status})`)
+      showReceipt(body.id)
+      try { localStorage.setItem(SUBMITTED_KEY, body.id) } catch {}
+      submitStatus('설문을 보냈어요. 감사합니다!')
+    } catch (err) {
+      const offline = err instanceof TypeError
+      submitStatus(offline ? '서버에 연결하지 못했어요. 인터넷 연결을 확인하고 다시 눌러 주세요.' : `보내지 못했어요: ${err.message}`, true)
+    } finally {
+      btn.disabled = false
+    }
+  })
+  try { showReceipt(localStorage.getItem(SUBMITTED_KEY)) } catch {}
 
   renderSteps()
   pills('forWhom', [{ id: 'self', ko: '나를 위한 향수' }, { id: 'gift', ko: '선물' }], { key: 'forWhom' })
@@ -662,7 +740,7 @@
   renderDescriptors()
   pills('moods', MOODS, { key: 'moods', multiple: true, max: MAX_MOODS })
   pills('gender', GENDER, { key: 'gender', numeric: true })
-  for (const id of ['name', 'lovedPerfumes', 'dislikedPerfumes', 'allergies', 'memo']) textField(id)
+  for (const id of ['name', 'contact', 'lovedPerfumes', 'dislikedPerfumes', 'allergies', 'memo']) textField(id)
 
   syncAll()
   renderResult()

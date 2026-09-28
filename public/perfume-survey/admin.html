@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="robots" content="noindex" />
+<title>조향 상담 응답함</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap" />
+<style>
+  :root {
+    --bg: #f3f2f7; --surface: #ffffff; --surface-2: #ebe9f2; --line: #dcd8e6;
+    --ink: #1e1b29; --dim: #625d73; --accent: #54419a; --accent-ink: #ffffff; --accent-soft: #e9e4f7;
+    --avoid: #b3364a;
+    --serif: 'Gowun Batang', 'Noto Serif KR', serif;
+    --sans: 'IBM Plex Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;
+    --mono: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+      --bg: #15131b; --surface: #1e1b27; --surface-2: #2a2635; --line: #36313f;
+      --ink: #ebe8f2; --dim: #a29db2; --accent: #b4a4f2; --accent-ink: #1a1526; --accent-soft: #2c2544;
+      --avoid: #f08a9b; color-scheme: dark;
+    }
+  }
+  :root[data-theme='dark'] {
+    --bg: #15131b; --surface: #1e1b27; --surface-2: #2a2635; --line: #36313f;
+    --ink: #ebe8f2; --dim: #a29db2; --accent: #b4a4f2; --accent-ink: #1a1526; --accent-soft: #2c2544;
+    --avoid: #f08a9b; color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.6 var(--sans); padding-inline: 16px; }
+  button, input { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding-block: 32px 64px; display: grid; gap: 20px; }
+  h1 { font: 700 30px/1.25 var(--serif); margin: 0; }
+  .eyebrow { font: 500 12px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+  .bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .bar input { flex: 1 1 220px; padding: 9px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); }
+  .btn { padding: 9px 14px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); cursor: pointer; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .status { color: var(--dim); min-height: 1.5em; margin: 0; }
+  .status.error { color: var(--avoid); }
+  .table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+  table { width: 100%; border-collapse: collapse; min-width: 720px; }
+  th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font: 500 11px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--dim); background: var(--surface-2); }
+  td.mono { font: 13px var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  tr.row { cursor: pointer; }
+  tr.row:hover td { background: var(--accent-soft); }
+  tr.row[aria-expanded='true'] td { background: var(--accent-soft); }
+  tr.detail td { background: var(--bg); }
+  pre { margin: 0; white-space: pre-wrap; font: 13px/1.6 var(--mono); }
+  .detail-actions { margin-top: 10px; display: flex; gap: 8px; }
+  .empty { padding: 28px; text-align: center; color: var(--dim); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <span class="eyebrow">Bespoke Perfume · Admin</span>
+    <h1>조향 상담 응답함</h1>
+  </header>
+
+  <form class="bar" id="login">
+    <label for="key" class="eyebrow" style="flex-basis:100%">관리자 키 (Netlify 환경 변수 PERFUME_ADMIN_KEY)</label>
+    <input type="password" id="key" autocomplete="current-password" placeholder="관리자 키" />
+    <button type="submit" class="btn primary">불러오기</button>
+    <button type="button" class="btn" id="csv" disabled>CSV 내려받기</button>
+  </form>
+  <p class="status" id="status" role="status"></p>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>접수 시각</th><th>접수번호</th><th>이름</th><th>연락처</th><th>향 계열</th><th>농도</th></tr></thead>
+      <tbody id="rows"><tr><td colspan="6" class="empty">관리자 키를 넣고 불러오기를 눌러 주세요.</td></tr></tbody>
+    </table>
+  </div>
+</div>
+
+<script type="module">
+  import { FAMILIES, CONCENTRATIONS } from './engine.js'
+
+  const $ = (id) => document.getElementById(id)
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c])
+  const famKo = (id) => FAMILIES.find((f) => f.id === id)?.ko ?? id
+  const concKo = (id) => CONCENTRATIONS.find((c) => c.id === id)?.ko ?? id
+  const when = (iso) => new Date(iso).toLocaleString('ko-KR', { dateStyle: 'short', timeStyle: 'short' })
+  const KEY_STORE = 'perfume-admin:key'
+  let responses = []
+
+  try { $('key').value = sessionStorage.getItem(KEY_STORE) ?? '' } catch {}
+
+  function status(msg, isError = false) {
+    $('status').textContent = msg
+    $('status').classList.toggle('error', isError)
+  }
+
+  async function load() {
+    const key = $('key').value.trim()
+    if (!key) return status('관리자 키를 넣어 주세요.', true)
+    status('불러오는 중…')
+    try {
+      const res = await fetch('/api/perfume-responses', { headers: { authorization: `Bearer ${key}` }, cache: 'no-store' })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body.message || `서버 오류 (${res.status})`)
+      try { sessionStorage.setItem(KEY_STORE, key) } catch {}
+      responses = body.responses
+      render()
+      const more = body.total > responses.length ? ` (전체 ${body.total}개 중 최근 ${responses.length}개)` : ''
+      status(`응답 ${responses.length}개${more}`)
+      $('csv').disabled = !responses.length
+    } catch (err) {
+      status(`불러오지 못했어요: ${err.message}`, true)
+    }
+  }
+
+  function render() {
+    if (!responses.length) {
+      $('rows').innerHTML = '<tr><td colspan="6" class="empty">아직 들어온 응답이 없어요.</td></tr>'
+      return
+    }
+    $('rows').innerHTML = responses.map((r, i) => `
+      <tr class="row" data-i="${i}" tabindex="0" aria-expanded="false">
+        <td class="mono">${esc(when(r.createdAt))}</td>
+        <td class="mono">${esc(r.id)}</td>
+        <td>${esc(r.answers.name || '—')}</td>
+        <td>${esc(r.answers.contact || '—')}</td>
+        <td>${esc(r.prescription.family.map(famKo).join(' + ') || '—')}</td>
+        <td>${esc(concKo(r.prescription.concentration))}</td>
+      </tr>
+      <tr class="detail" id="detail-${i}" hidden><td colspan="6">
+        <pre>${esc(r.summary)}</pre>
+        <div class="detail-actions"><button type="button" class="btn" data-copy="${i}">요약 복사</button></div>
+      </td></tr>`).join('')
+  }
+
+  function toggle(row) {
+    const open = row.getAttribute('aria-expanded') !== 'true'
+    row.setAttribute('aria-expanded', String(open))
+    $(`detail-${row.dataset.i}`).hidden = !open
+  }
+
+  $('rows').addEventListener('click', async (e) => {
+    const copyBtn = e.target.closest('[data-copy]')
+    if (copyBtn) {
+      try {
+        await navigator.clipboard.writeText(responses[Number(copyBtn.dataset.copy)].summary)
+        status('요약을 복사했어요.')
+      } catch {
+        status('복사가 막혀 있어요. 요약을 직접 선택해 복사해 주세요.', true)
+      }
+      return
+    }
+    const row = e.target.closest('tr.row')
+    if (row) toggle(row)
+  })
+  $('rows').addEventListener('keydown', (e) => {
+    const row = e.target.closest('tr.row')
+    if (row && (e.key === 'Enter' || e.key === ' ')) {
+      e.preventDefault()
+      toggle(row)
+    }
+  })
+
+  $('login').addEventListener('submit', (e) => {
+    e.preventDefault()
+    load()
+  })
+
+  $('csv').addEventListener('click', () => {
+    const cell = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`
+    const header = ['접수 시각', '접수번호', '이름', '연락처', '향 계열', '탑', '미들', '베이스', '농도', '알레르기', '메모', '요약']
+    const lines = responses.map((r) => [
+      r.createdAt, r.id, r.answers.name, r.answers.contact,
+      r.prescription.family.map(famKo).join(' + '),
+      r.prescription.top.join(' '), r.prescription.middle.join(' '), r.prescription.base.join(' '),
+      concKo(r.prescription.concentration), r.answers.allergies, r.answers.memo, r.summary,
+    ].map(cell).join(','))
+    // 엑셀에서 한글이 깨지지 않도록 BOM 을 붙인다
+    const blob = new Blob(['﻿' + [header.map(cell).join(','), ...lines].join('\r\n')], { type: 'text/csv;charset=utf-8' })
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(blob)
+    a.download = `perfume-responses-${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(a.href)
+  })
+
+  if ($('key').value) load()
+</script>
+</body>
+</html>
