@@ -83,8 +83,11 @@ export interface PrescriptionLike {
   concentration: string
 }
 export const STRENGTH_DEFAULT: Record<string, number>
+export const TEST_DROPS_DEFAULT: number
+export function gramsFromDrops(drops: number[], oilG: number): number[]
 export function suggestRecipe(
   prescription: PrescriptionLike,
   totalG: number,
   strengthPct?: number,
-): { strengthPct: number; oilG: number; ingredients: { name: string; layer: Layer; grams: number }[] }
+  totalDrops?: number,
+): { strengthPct: number; oilG: number; ingredients: { name: string; layer: Layer; drops: number; grams: number }[] }

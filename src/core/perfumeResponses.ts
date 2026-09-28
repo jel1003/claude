@@ -60,6 +60,8 @@ export const RECIPE_LAYERS = ['', 'top', 'middle', 'base'] as const
 export interface RecipeIngredient {
   name: string
   layer: (typeof RECIPE_LAYERS)[number]
+  /** 시안 테스트 때 쓴 방울 수. 있으면 g 은 방울 비율 × 향료 총량으로 계산된 값이다. */
+  drops: number
   /** 양 (g) */
   grams: number
 }
@@ -166,6 +168,7 @@ export function sanitizeRecipes(raw: unknown, now = new Date().toISOString()): C
         .map((g) => ({
           name: text(g.name, 80),
           layer: oneOf(g.layer, RECIPE_LAYERS, ''),
+          drops: num(g.drops ?? (g.unit === 'drop' ? g.amount : 0), 10000),
           grams: num(g.grams ?? (g.unit === 'g' ? g.amount : 0), 10000),
         }))
         .filter((g) => g.name)

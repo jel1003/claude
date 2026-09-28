@@ -161,7 +161,7 @@ describe('실제 레시피 기록', () => {
     totalG: 25,
     strengthPct: 18,
     ingredients: [
-      { name: '베르가못', layer: 'top', grams: 1.2 },
+      { name: '베르가못', layer: 'top', drops: 3, grams: 1.2 },
       { name: '로즈', layer: 'middle', grams: '0.8' },
       { name: '', layer: 'base', grams: 0.3 },
     ],
@@ -180,6 +180,7 @@ describe('실제 레시피 기록', () => {
     expect(r.label).toBe('1차 시안')
     expect(r.ingredients.map((g) => g.name)).toEqual(['베르가못', '로즈'])
     expect(r.ingredients[1]!.grams).toBe(0.8)
+    expect(r.ingredients.map((g) => g.drops)).toEqual([3, 0])
     expect(r.final).toBe(true)
 
     const one = await call(get(`?id=${id}`), store)
@@ -203,7 +204,7 @@ describe('실제 레시피 기록', () => {
       { label: 'x', madeAt: '어제', totalG: -5, strengthPct: 500, ingredients: [{ name: 'a', layer: 'heart', grams: 'many', unit: 'kg' }], extra: 1 },
     ])
     expect(r).toMatchObject({ madeAt: '', totalG: 0, strengthPct: 100, final: false })
-    expect(r!.ingredients[0]).toEqual({ name: 'a', layer: '', grams: 0 })
+    expect(r!.ingredients[0]).toEqual({ name: 'a', layer: '', drops: 0, grams: 0 })
     expect(r).not.toHaveProperty('extra')
     expect(sanitizeRecipes('nope')).toEqual([])
   })
@@ -214,5 +215,6 @@ describe('실제 레시피 기록', () => {
     ])
     expect(r!.totalG).toBe(30)
     expect(r!.ingredients.map((g) => g.grams)).toEqual([0, 1.5])
+    expect(r!.ingredients.map((g) => g.drops)).toEqual([3, 0])
   })
 })

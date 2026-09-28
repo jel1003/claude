@@ -10,6 +10,7 @@ import {
   emptyAnswers,
   formatSummary,
   layerRatio,
+  gramsFromDrops,
   suggestRecipe,
   recommendConcentration,
   sampleAnswers,
@@ -141,7 +142,7 @@ describe('비율과 농도', () => {
   })
 })
 
-describe('실제 레시피 초안 (g)', () => {
+describe('실제 레시피 초안 (방울 → g)', () => {
   const prescription = {
     top: ['bergamot', 'lemon'],
     middle: ['rose'],
@@ -149,23 +150,39 @@ describe('실제 레시피 초안 (g)', () => {
     ratio: { top: 30, middle: 40, base: 30 },
     concentration: 'edp',
   }
+  const sum = (xs: number[]) => xs.reduce((s, x) => s + x, 0)
 
-  it('완성 중량 × 부향률을 층별 추천 비율로 나눈다', () => {
+  it('총 방울 수를 층별 추천 비율로 나누고, 방울 비율대로 향료 g 을 나눈다', () => {
     const r = suggestRecipe(prescription, 30)
     expect(r.strengthPct).toBe(18)
     expect(r.oilG).toBe(5.4)
-    const sum = (layer: string) => r.ingredients.filter((g) => g.layer === layer).reduce((s, g) => s + g.grams, 0)
-    expect(sum('top')).toBeCloseTo(1.62, 2)
-    expect(sum('middle')).toBeCloseTo(2.16, 2)
-    expect(sum('base')).toBeCloseTo(1.62, 2)
-    expect(r.ingredients.reduce((s, g) => s + g.grams, 0)).toBeCloseTo(5.4, 5)
-    expect(r.ingredients[0]).toEqual({ name: '베르가못', layer: 'top', grams: 0.81 })
+    const drops = r.ingredients.map((g) => g.drops)
+    expect(sum(drops)).toBe(30)
+    expect(drops.every((d) => Number.isInteger(d) && d >= 1)).toBe(true)
+    // 탑 30% · 미들 40% · 베이스 30% → 9 · 12 · 9 방울
+    const layerDrops = (l: string) => sum(r.ingredients.filter((g) => g.layer === l).map((g) => g.drops))
+    expect([layerDrops('top'), layerDrops('middle'), layerDrops('base')]).toEqual([9, 12, 9])
+    expect(sum(r.ingredients.map((g) => g.grams))).toBeCloseTo(5.4, 5)
+    expect(r.ingredients[0]).toEqual({ name: '베르가못', layer: 'top', drops: 5, grams: 0.9 })
   })
 
-  it('부향률을 직접 주면 그 값을 쓰고, 비어 있는 층은 건너뛴다', () => {
-    const r = suggestRecipe({ ...prescription, middle: [] }, 50, 10)
-    expect(r.oilG).toBe(5)
-    expect(r.ingredients.some((g) => g.layer === 'middle')).toBe(false)
-    expect(r.ingredients.reduce((s, g) => s + g.grams, 0)).toBeCloseTo(5, 5)
+  it('노트가 많아도 최소 1방울씩 준다', () => {
+    const r = suggestRecipe(prescription, 30, 18, 4)
+    expect(r.ingredients.every((g) => g.drops >= 1)).toBe(true)
+  })
+})
+
+describe('방울 → g 변환', () => {
+  it('방울 비율대로 향료 총량을 나눈다', () => {
+    expect(gramsFromDrops([3, 5, 2], 5)).toEqual([1.5, 2.5, 1])
+    // 반올림 오차는 마지막 재료가 맞춘다
+    const g = gramsFromDrops([1, 1, 1], 1)
+    expect(g.reduce((s, x) => s + x, 0)).toBeCloseTo(1, 5)
+  })
+
+  it('방울이 0인 재료는 0g, 방울이 없거나 목표가 0이면 모두 0g', () => {
+    expect(gramsFromDrops([2, 0, 2], 4)).toEqual([2, 0, 2])
+    expect(gramsFromDrops([0, 0], 4)).toEqual([0, 0])
+    expect(gramsFromDrops([1, 2], 0)).toEqual([0, 0])
   })
 })

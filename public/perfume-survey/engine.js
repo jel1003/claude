@@ -553,32 +553,52 @@ export function formatSummary(answers, result) {
 /** 화면의 '예시로 채워보기'용 샘플 응답 */
 /** 농도별 기본 부향률 (중량 %). 실제 레시피 초안에 쓴다. */
 export const STRENGTH_DEFAULT = { edc: 4, edt: 10, edp: 18, extrait: 25 }
+/** 방울 시안 테스트의 기본 총 방울 수 */
+export const TEST_DROPS_DEFAULT = 30
 
 const round2 = (n) => Math.round(n * 100) / 100
 
 /**
- * 추천 처방을 g 단위 레시피 초안으로 바꾼다.
- * 향료 총량 = 완성 중량 × 부향률. 이것을 탑 · 미들 · 베이스 추천 비율로 나누고,
- * 같은 층의 노트끼리는 똑같이 나눈다. 0.01g 단위로 반올림하고 끝자리는 마지막 노트가 맞춘다.
+ * 방울 수 비율대로 향료 총량(g)을 나눈다. 0.01g 반올림, 끝자리는 방울이 있는 마지막 재료가 맞춘다.
+ * 방울이 하나도 없으면 전부 0.
  */
-export function suggestRecipe(prescription, totalG, strengthPct) {
+export function gramsFromDrops(drops, oilG) {
+  const total = drops.reduce((sum, d) => sum + (d > 0 ? d : 0), 0)
+  if (!total || !(oilG > 0)) return drops.map(() => 0)
+  const grams = drops.map((d) => (d > 0 ? round2((oilG * d) / total) : 0))
+  const last = drops.map((d) => d > 0).lastIndexOf(true)
+  grams[last] = round2(grams[last] + round2(oilG) - grams.reduce((sum, g) => sum + g, 0))
+  return grams
+}
+
+/**
+ * 추천 처방을 시안 초안으로 바꾼다.
+ * 1) 총 방울 수를 탑 · 미들 · 베이스 추천 비율로 나누고 같은 층 노트끼리 똑같이 나눈다
+ *    (정수 방울, 노트마다 최소 1방울, 반올림 오차는 소수점이 큰 순서로 나눠 준다).
+ * 2) 그 방울 비율대로 향료 총량(완성 중량 × 부향률)을 g 으로 나눈다.
+ */
+export function suggestRecipe(prescription, totalG, strengthPct, totalDrops = TEST_DROPS_DEFAULT) {
   const strength = strengthPct || STRENGTH_DEFAULT[prescription.concentration] || 18
   const oil = round2((totalG * strength) / 100)
   const layers = ['top', 'middle', 'base'].filter((l) => prescription[l]?.length)
   const ratioSum = layers.reduce((sum, l) => sum + (prescription.ratio?.[l] || 0), 0)
-  const ingredients = []
+  const notes = []
   for (const layer of layers) {
     const share = ratioSum ? (prescription.ratio[layer] || 0) / ratioSum : 1 / layers.length
-    const each = (oil * share) / prescription[layer].length
     for (const id of prescription[layer]) {
-      ingredients.push({ name: NOTES.find((n) => n.id === id)?.ko ?? id, layer, grams: round2(each) })
+      notes.push({ name: NOTES.find((n) => n.id === id)?.ko ?? id, layer, raw: (totalDrops * share) / prescription[layer].length })
     }
   }
-  if (ingredients.length) {
-    const last = ingredients[ingredients.length - 1]
-    last.grams = round2(last.grams + oil - ingredients.reduce((sum, g) => sum + g.grams, 0))
+  const drops = notes.map((n) => Math.max(1, Math.floor(n.raw)))
+  let left = totalDrops - drops.reduce((sum, d) => sum + d, 0)
+  const byRemainder = notes.map((n, i) => [n.raw - Math.floor(n.raw), i]).sort((x, y) => y[0] - x[0])
+  for (let k = 0; left > 0 && byRemainder.length; k = (k + 1) % byRemainder.length, left--) drops[byRemainder[k][1]]++
+  const grams = gramsFromDrops(drops, oil)
+  return {
+    strengthPct: strength,
+    oilG: oil,
+    ingredients: notes.map((n, i) => ({ name: n.name, layer: n.layer, drops: drops[i], grams: grams[i] })),
   }
-  return { strengthPct: strength, oilG: oil, ingredients }
 }
 
 export function sampleAnswers() {
