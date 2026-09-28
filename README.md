@@ -140,6 +140,10 @@ npx netlify deploy --prod --dir=dist
 `PERFUME_ADMIN_KEY` 를 길고 추측하기 어려운 값으로 추가하고 다시 배포하세요. 설정하지 않으면 제출은 되지만
 목록 조회는 막혀 있습니다(503). 로컬 `npm run dev` 에서는 메모리 저장소를 쓰고 키 기본값은 `dev-admin` 입니다.
 
+**설문 전용 사이트**: `scripts/stage-perfume-site.sh <폴더>` 로 설문만 담은 배포 폴더를 만들 수 있습니다.
+그 폴더를 배포하면 설문이 사이트 루트(`/`)에, 응답함이 `/admin.html` 에 옵니다
+(Netlify 프로젝트 `johyang-survey`).
+
 ```
 public/perfume-survey/
   index.html      설문 화면
