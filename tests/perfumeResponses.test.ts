@@ -4,6 +4,7 @@ import {
   handlePerfumeResponses,
   newResponseId,
   sanitizeAnswers,
+  sanitizeRecipes,
 } from '../src/core/perfumeResponses'
 import type { StoredResponse } from '../src/core/perfumeResponses'
 import { sampleAnswers } from '../public/perfume-survey/engine.js'
@@ -16,6 +17,15 @@ function post(body: unknown): Request {
   return new Request(URL_BASE, {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'content-length': String(serialized.length) },
+    body: serialized,
+  })
+}
+
+function put(query: string, body: unknown, key: string | null = KEY): Request {
+  const serialized = JSON.stringify(body)
+  return new Request(URL_BASE + query, {
+    method: 'PUT',
+    headers: { 'content-type': 'application/json', ...(key === null ? {} : { authorization: `Bearer ${key}` }) },
     body: serialized,
   })
 }
@@ -142,4 +152,59 @@ describe('관리자 조회', () => {
     expect((await call(get(`?id=${legacy}`), store)).status).toBe(200)
   })
 
+})
+
+describe('실제 레시피 기록', () => {
+  const recipe = {
+    label: '1차 시안',
+    madeAt: '2026-09-28',
+    volumeMl: 30,
+    strengthPct: 18,
+    ingredients: [
+      { name: '베르가못', layer: 'top', amount: 12, unit: 'drop' },
+      { name: '로즈', layer: 'middle', amount: '8', unit: 'drop' },
+      { name: '', layer: 'base', amount: 3, unit: 'drop' },
+    ],
+    memo: '잔향 조금 더',
+    final: true,
+  }
+
+  it('관리자가 레시피를 저장하면 응답에 붙고 다시 읽힌다', async () => {
+    const store = createMemoryResponseStore()
+    const { body } = await call(post({ answers: sampleAnswers(), consent: true }), store)
+    const id = body.id as string
+
+    const saved = await call(put(`?id=${id}`, { recipes: [recipe] }), store)
+    expect(saved.status).toBe(200)
+    const r = (saved.body.response as StoredResponse).recipes![0]!
+    expect(r.label).toBe('1차 시안')
+    expect(r.ingredients.map((g) => g.name)).toEqual(['베르가못', '로즈'])
+    expect(r.ingredients[1]!.amount).toBe(8)
+    expect(r.final).toBe(true)
+
+    const one = await call(get(`?id=${id}`), store)
+    expect((one.body.response as StoredResponse).recipes).toHaveLength(1)
+    // 설문 답변은 그대로 남는다
+    expect((one.body.response as StoredResponse).answers.name).toBe(sampleAnswers().name)
+  })
+
+  it('키가 없거나 없는 접수번호면 저장하지 않는다', async () => {
+    const store = createMemoryResponseStore()
+    const { body } = await call(post({ answers: sampleAnswers(), consent: true }), store)
+    expect((await call(put(`?id=${body.id as string}`, { recipes: [] }, null), store)).status).toBe(401)
+    expect((await call(put(`?id=${body.id as string}`, { recipes: [] }, 'wrong'), store)).status).toBe(401)
+    expect((await call(put('?id=260928-0000', { recipes: [] }), store)).status).toBe(404)
+    expect((await call(put('?id=../x', { recipes: [] }), store)).status).toBe(400)
+    expect((await call(put(`?id=${body.id as string}`, { nope: 1 }), store)).status).toBe(400)
+  })
+
+  it('이상한 값은 걸러낸다', () => {
+    const [r] = sanitizeRecipes([
+      { label: 'x', madeAt: '어제', volumeMl: -5, strengthPct: 500, ingredients: [{ name: 'a', layer: 'heart', amount: 'many', unit: 'kg' }], extra: 1 },
+    ])
+    expect(r).toMatchObject({ madeAt: '', volumeMl: 0, strengthPct: 100, final: false })
+    expect(r!.ingredients[0]).toEqual({ name: 'a', layer: '', amount: 0, unit: 'drop' })
+    expect(r).not.toHaveProperty('extra')
+    expect(sanitizeRecipes('nope')).toEqual([])
+  })
 })
