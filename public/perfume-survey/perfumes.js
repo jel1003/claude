@@ -161,7 +161,7 @@ export const PERFUMES = [
     top: ['lemon', 'mandarin'], middle: ['orange_blossom', 'ozone'], base: ['white_musk', 'amber'], aliases: ['코튼'] },
   { id: 'fe-red-power-ice-3', brand: 'Ferrari', brandKo: '페라리', name: 'Red Power Ice 3', nameKo: '레드 파워 아이스 3', family: 'aquatic',
     top: ['bergamot', 'grapefruit', 'blackcurrant'], middle: ['sea_notes', 'cardamom'], base: ['white_musk', 'iris', 'amber'], other: ['고수'],
-    aliases: ['레드파워', '아이스3', 'ice3'] },
+    aliases: ['레드파워', '아이스3', 'ice3', '레드아이스', '레드 파워 아이스', 'red power ice'] },
 
   // 한국 브랜드 — 제품 구성과 노트를 공식 설명으로 꼭 확인할 것 (check: true)
   { id: 'tb-chamo', brand: 'TAMBURINS', brandKo: '탬버린즈', name: 'CHAMO', nameKo: '카모', family: 'aromatic', check: true,
