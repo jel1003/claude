@@ -4,6 +4,7 @@ import {
   handlePerfumeResponses,
   newResponseId,
   sanitizeAnswers,
+  sanitizeRecipes,
 } from '../src/core/perfumeResponses'
 import type { StoredResponse } from '../src/core/perfumeResponses'
 import { sampleAnswers } from '../public/perfume-survey/engine.js'
@@ -16,6 +17,15 @@ function post(body: unknown): Request {
   return new Request(URL_BASE, {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'content-length': String(serialized.length) },
+    body: serialized,
+  })
+}
+
+function put(query: string, body: unknown, key: string | null = KEY): Request {
+  const serialized = JSON.stringify(body)
+  return new Request(URL_BASE + query, {
+    method: 'PUT',
+    headers: { 'content-type': 'application/json', ...(key === null ? {} : { authorization: `Bearer ${key}` }) },
     body: serialized,
   })
 }
@@ -34,7 +44,7 @@ describe('설문 응답 제출', () => {
     const store = createMemoryResponseStore()
     const res = await call(post({ answers: sampleAnswers(), consent: true }), store)
     expect(res.status).toBe(201)
-    expect(res.body.id).toMatch(/^[0-9a-z]{9}-[0-9a-z]{10}$/)
+    expect(res.body.id).toMatch(/^\d{6}-\d{4}$/)
     const saved = (await store.get(res.body.id as string)) as StoredResponse
     expect(saved.answers.name).toBe('예시 고객')
     expect(saved.summary).toContain('연락처: 010-0000-0000')
@@ -122,7 +132,98 @@ describe('관리자 조회', () => {
     expect((await call(get('?id=../../etc'), store)).status).toBe(400)
   })
 
-  it('접수번호는 시간순으로 정렬된다', () => {
-    expect(newResponseId(1000) < newResponseId(2000)).toBe(true)
+  it('접수번호는 한국 날짜 + 숫자 4자리이고 날짜순으로 정렬된다', () => {
+    // 2026-09-27 15:30 UTC = 2026-09-28 00:30 KST
+    expect(newResponseId(Date.UTC(2026, 8, 27, 15, 30))).toMatch(/^260928-\d{4}$/)
+    expect(newResponseId(Date.UTC(2026, 8, 27, 14, 59))).toMatch(/^260927-\d{4}$/)
+    expect(newResponseId(Date.UTC(2026, 8, 27)) < newResponseId(Date.UTC(2026, 8, 28))).toBe(true)
+  })
+
+  it('예전 형식 접수번호도 계속 조회된다', async () => {
+    const store = createMemoryResponseStore()
+    const legacy = 'mg3k2p1a0-0a1b2c3d4e'
+    await store.set(legacy, JSON.stringify({ id: legacy, createdAt: '2026-01-01T00:00:00.000Z', answers: sampleAnswers() }))
+    await call(post({ answers: sampleAnswers(), consent: true }), store)
+
+    const list = await call(get(), store)
+    const ids = (list.body.responses as StoredResponse[]).map((r) => r.id)
+    expect(ids).toHaveLength(2)
+    expect(ids[1]).toBe(legacy)
+    expect((await call(get(`?id=${legacy}`), store)).status).toBe(200)
+  })
+
+})
+
+describe('기준 향수 정리', () => {
+  it('목록에 있는 향수만 최대 3개 남기고, 향수를 골랐으면 refNone 은 끈다', () => {
+    const a = sanitizeAnswers({ refPerfumes: ['by-blanche', 'nope', 'll-santal-33', 'by-blanche', 'di-sauvage', 'ch-no5'], refNone: true })
+    expect(a.refPerfumes).toEqual(['by-blanche', 'll-santal-33', 'di-sauvage'])
+    expect(a.refNone).toBe(false)
+    expect(sanitizeAnswers({ refNone: true }).refNone).toBe(true)
+  })
+})
+
+describe('실제 레시피 기록', () => {
+  const recipe = {
+    label: '1차 시안',
+    madeAt: '2026-09-28',
+    totalG: 25,
+    strengthPct: 18,
+    ingredients: [
+      { name: '베르가못', layer: 'top', drops: 3, grams: 1.2 },
+      { name: '로즈', layer: 'middle', grams: '0.8' },
+      { name: '', layer: 'base', grams: 0.3 },
+    ],
+    memo: '잔향 조금 더',
+    final: true,
+  }
+
+  it('관리자가 레시피를 저장하면 응답에 붙고 다시 읽힌다', async () => {
+    const store = createMemoryResponseStore()
+    const { body } = await call(post({ answers: sampleAnswers(), consent: true }), store)
+    const id = body.id as string
+
+    const saved = await call(put(`?id=${id}`, { recipes: [recipe] }), store)
+    expect(saved.status).toBe(200)
+    const r = (saved.body.response as StoredResponse).recipes![0]!
+    expect(r.label).toBe('1차 시안')
+    expect(r.ingredients.map((g) => g.name)).toEqual(['베르가못', '로즈'])
+    expect(r.ingredients[1]!.grams).toBe(0.8)
+    expect(r.ingredients.map((g) => g.drops)).toEqual([3, 0])
+    expect(r.final).toBe(true)
+
+    const one = await call(get(`?id=${id}`), store)
+    expect((one.body.response as StoredResponse).recipes).toHaveLength(1)
+    // 설문 답변은 그대로 남는다
+    expect((one.body.response as StoredResponse).answers.name).toBe(sampleAnswers().name)
+  })
+
+  it('키가 없거나 없는 접수번호면 저장하지 않는다', async () => {
+    const store = createMemoryResponseStore()
+    const { body } = await call(post({ answers: sampleAnswers(), consent: true }), store)
+    expect((await call(put(`?id=${body.id as string}`, { recipes: [] }, null), store)).status).toBe(401)
+    expect((await call(put(`?id=${body.id as string}`, { recipes: [] }, 'wrong'), store)).status).toBe(401)
+    expect((await call(put('?id=260928-0000', { recipes: [] }), store)).status).toBe(404)
+    expect((await call(put('?id=../x', { recipes: [] }), store)).status).toBe(400)
+    expect((await call(put(`?id=${body.id as string}`, { nope: 1 }), store)).status).toBe(400)
+  })
+
+  it('이상한 값은 걸러낸다', () => {
+    const [r] = sanitizeRecipes([
+      { label: 'x', madeAt: '어제', totalG: -5, strengthPct: 500, ingredients: [{ name: 'a', layer: 'heart', grams: 'many', unit: 'kg' }], extra: 1 },
+    ])
+    expect(r).toMatchObject({ madeAt: '', totalG: 0, strengthPct: 100, final: false })
+    expect(r!.ingredients[0]).toEqual({ name: 'a', layer: '', drops: 0, grams: 0 })
+    expect(r).not.toHaveProperty('extra')
+    expect(sanitizeRecipes('nope')).toEqual([])
+  })
+
+  it('예전 형식(ml · 방울)은 g 필드로 옮긴다', () => {
+    const [r] = sanitizeRecipes([
+      { volumeMl: 30, ingredients: [{ name: 'a', amount: 3, unit: 'drop' }, { name: 'b', amount: 1.5, unit: 'g' }] },
+    ])
+    expect(r!.totalG).toBe(30)
+    expect(r!.ingredients.map((g) => g.grams)).toEqual([0, 1.5])
+    expect(r!.ingredients.map((g) => g.drops)).toEqual([3, 0])
   })
 })

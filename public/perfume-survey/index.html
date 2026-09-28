@@ -72,6 +72,7 @@
   h1, h2, h3 { font-family: var(--serif); font-weight: 700; text-wrap: balance; margin: 0; }
   p { margin: 0; }
   button, input, textarea { font: inherit; color: inherit; }
+  [hidden] { display: none !important; }
   :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
@@ -256,6 +257,41 @@
   .receipt { display: grid; gap: 2px; padding: 14px 16px; border-radius: 10px; background: var(--accent-soft); font-size: 13.5px; }
   .receipt .k { font: 500 11px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
   .receipt b { font: 500 20px var(--mono); letter-spacing: .02em; user-select: all; }
+  /* 좋아하는 향수 */
+  input[type='search'] { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); }
+  .search-field { position: relative; }
+  .perfume-results {
+    list-style: none; margin: 0; padding: 4px; border: 1px solid var(--line); border-radius: 10px;
+    background: var(--surface); display: grid; gap: 2px; max-height: 320px; overflow-y: auto;
+  }
+  .perfume-results button {
+    width: 100%; text-align: left; padding: 8px 10px; border-radius: 8px; border: 0; background: none; cursor: pointer;
+    display: grid; gap: 1px; line-height: 1.35;
+  }
+  .perfume-results button small { color: var(--dim); font-size: 12px; }
+  .perfume-results button:hover, .perfume-results button[aria-selected='true'] { background: var(--accent-soft); }
+  .perfume-results button:disabled { opacity: .45; cursor: default; }
+  .hint { font-size: 13px; color: var(--dim); min-height: 1.2em; }
+  .refs { display: grid; gap: 10px; }
+  .ref { border: 1px solid var(--accent); border-radius: 10px; padding: 14px; display: grid; gap: 10px; background: var(--surface); }
+  .ref-head { display: flex; gap: 10px; align-items: flex-start; }
+  .ref-head h3 { font-size: 17px; flex: 1; min-width: 0; }
+  .ref-head h3 small { display: block; font: 400 12px var(--sans); color: var(--dim); }
+  .ref-head .fam-tag { display: block; margin-top: 2px; font: 500 12px var(--sans); color: var(--accent); }
+  .ref-tier { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 8px; align-items: start; }
+  .ref-tier > span { font: 500 11px/28px var(--mono); color: var(--dim); text-transform: uppercase; letter-spacing: .06em; }
+  .ref .other { padding: 5px 11px; border-radius: 999px; border: 1px dashed var(--line); color: var(--dim); font-size: 13px; }
+  .legend-line { font-size: 13px; color: var(--dim); }
+  .btn.sm { padding: 5px 10px; font-size: 13px; border-radius: 8px; }
+  .btn.ghost { border-color: transparent; background: none; color: var(--dim); }
+  #refNoneWrap input:disabled + span { opacity: .45; }
+  .skipnote {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 10px 14px;
+    border-radius: 10px; background: var(--accent-soft); font-size: 14px;
+  }
+  .skipnote span { flex: 1 1 220px; }
+  section.q.skipped > :not(.q-head):not(.skipnote) { display: none; }
+  .steps a.skipped { border-style: dashed; }
   .foot { margin-top: 28px; font-size: 12.5px; color: var(--dim); max-width: 70ch; }
 
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
@@ -266,16 +302,16 @@
   <header class="masthead">
     <span class="eyebrow">Bespoke Perfume · Consultation</span>
     <h1>조향 상담 설문지</h1>
-    <p>향 계열, 메인 어코드, 노트 분류로 좋아하는 향을 여쭤봅니다. 답할수록 오른쪽 처방이 바뀌고, 마지막에 조향사에게 넘길 요약을 복사할 수 있어요. 모르는 질문은 건너뛰셔도 됩니다.</p>
+    <p>좋아하는 향수와 향 계열, 메인 어코드, 노트 분류로 좋아하는 향을 여쭤봅니다. 답할수록 오른쪽 처방이 바뀌고, 마지막에 조향사에게 넘길 요약을 복사할 수 있어요. 모르는 질문은 건너뛰셔도 됩니다.</p>
   </header>
 
   <div class="layout">
     <div>
       <nav aria-label="설문 단계"><ol class="steps" id="steps"></ol></nav>
 
-      <form id="survey" novalidate>
+      <form id="survey" novalidate autocomplete="off">
         <section class="q" id="s1">
-          <div class="q-head"><span class="num">STEP 1 / 8</span><h2>기본 정보</h2><p>상담을 위한 기본 정보예요.</p></div>
+          <div class="q-head"><span class="num">STEP 1 / 9</span><h2>기본 정보</h2><p>상담을 위한 기본 정보예요.</p></div>
           <div class="field">
             <label class="label" for="name">성함 또는 닉네임 <small>선택</small></label>
             <input type="text" id="name" autocomplete="name" placeholder="예: 김향기" />
@@ -289,32 +325,48 @@
         </section>
 
         <section class="q" id="s2">
-          <div class="q-head"><span class="num">STEP 2 / 8</span><h2>언제 뿌리실 건가요?</h2><p>계절과 시간대에 따라 어울리는 어코드가 달라져요.</p></div>
+          <div class="q-head"><span class="num">STEP 2 / 9</span><h2>좋아하는 향수</h2><p>좋아하는 향수를 찾아 고르면 그 향수의 노트가 채워져요. 빼고 싶은 노트는 눌러서 표시해 주세요. 향수를 고르면 계열 · 어코드 단계는 건너뛰셔도 됩니다.</p></div>
+          <div class="field search-field">
+            <label class="label" for="perfumeSearch">향수 찾기 <small>최대 3개 · 브랜드나 이름(한글/영문)</small></label>
+            <input type="search" id="perfumeSearch" placeholder="예: 조말론, 상탈, blanche" autocomplete="off" enterkeyhint="search"
+              role="combobox" aria-autocomplete="list" aria-controls="perfumeResults" aria-expanded="false" />
+            <ul class="perfume-results" id="perfumeResults" role="listbox" aria-label="검색 결과" hidden></ul>
+            <p class="hint" id="perfumeHint" role="status"></p>
+          </div>
+          <div class="refs" id="refList"></div>
+          <p class="legend-line" id="refLegend" hidden>색이 칠해진 노트가 들어가요. 빼고 싶은 노트를 누르면 줄이 그어지고, 다시 누르면 돌아와요. 점선은 목록에 없는 참고용 노트예요.</p>
+          <label class="pill" id="refNoneWrap"><input type="checkbox" id="refNone" /><span>기준으로 삼을 향수가 없어요</span></label>
+        </section>
+
+        <section class="q" id="s3">
+          <div class="q-head"><span class="num">STEP 3 / 9</span><h2>언제 뿌리실 건가요?</h2><p>계절과 시간대에 따라 어울리는 어코드가 달라져요.</p></div>
           <div class="field"><span class="label">계절 <small>여러 개 선택</small></span><div class="pills" id="seasons"></div></div>
           <div class="field"><span class="label">시간대</span><div class="pills" id="daytime"></div></div>
           <div class="field"><span class="label">주로 쓰는 상황 <small>여러 개 선택</small></span><div class="pills" id="occasions"></div></div>
         </section>
 
-        <section class="q" id="s3">
-          <div class="q-head"><span class="num">STEP 3 / 8</span><h2>얼마나 오래, 얼마나 멀리</h2><p>지속력과 확산력은 부향률(농도)과 베이스 노트 비중을 정하는 데 씁니다.</p></div>
+        <section class="q" id="s4">
+          <div class="q-head"><span class="num">STEP 4 / 9</span><h2>얼마나 오래, 얼마나 멀리</h2><p>지속력과 확산력은 부향률(농도)과 베이스 노트 비중을 정하는 데 씁니다.</p></div>
           <div class="field"><span class="label">원하는 지속력</span><div class="pills" id="longevity"></div></div>
           <div class="field"><span class="label">원하는 확산력(시야주)</span><div class="pills" id="sillage"></div></div>
           <div class="field"><span class="label">피부 타입</span><div class="pills" id="skin"></div></div>
           <div class="field"><span class="label">원하는 농도가 있나요?</span><div class="pills" id="concentration"></div></div>
         </section>
 
-        <section class="q" id="s4">
-          <div class="q-head"><span class="num">STEP 4 / 8</span><h2>끌리는 향 계열</h2><p>향수를 크게 나누는 계열이에요. 끌리는 것은 ‘좋아요’, 손이 안 가는 것은 ‘별로예요’를 눌러 주세요. 색 띠는 그 계열의 대표 어코드입니다.</p></div>
+        <section class="q" id="s5">
+          <div class="q-head"><span class="num">STEP 5 / 9</span><h2>끌리는 향 계열</h2><p>향수를 크게 나누는 계열이에요. 끌리는 것은 ‘좋아요’, 손이 안 가는 것은 ‘별로예요’를 눌러 주세요. 색 띠는 그 계열의 대표 어코드입니다.</p></div>
+          <div class="skipnote" hidden><span>좋아하는 향수로 계열을 잡았어요. 건너뛰셔도 됩니다.</span><button type="button" class="btn sm" data-expand="s5" aria-expanded="false">직접 고르기</button></div>
           <div class="families" id="families"></div>
         </section>
 
-        <section class="q" id="s5">
-          <div class="q-head"><span class="num">STEP 5 / 8</span><h2>메인 어코드</h2><p>향수 설명에서 색 막대로 표시되는 ‘메인 어코드’예요. 아는 것만 평가하셔도 됩니다.</p></div>
+        <section class="q" id="s6">
+          <div class="q-head"><span class="num">STEP 6 / 9</span><h2>메인 어코드</h2><p>향수 설명에서 색 막대로 표시되는 ‘메인 어코드’예요. 아는 것만 평가하셔도 됩니다.</p></div>
+          <div class="skipnote" hidden><span>좋아하는 향수로 어코드를 잡았어요. 건너뛰셔도 됩니다.</span><button type="button" class="btn sm" data-expand="s6" aria-expanded="false">직접 고르기</button></div>
           <div class="accords" id="accords"></div>
         </section>
 
-        <section class="q" id="s6">
-          <div class="q-head"><span class="num">STEP 6 / 8</span><h2>노트 고르기</h2><p>향료 하나하나를 노트라고 해요. 누를 때마다 상태가 바뀝니다.</p></div>
+        <section class="q" id="s7">
+          <div class="q-head"><span class="num">STEP 7 / 9</span><h2>노트 고르기</h2><p>향료 하나하나를 노트라고 해요. 누를 때마다 상태가 바뀝니다. 좋아하는 향수를 골랐다면 그 향수의 노트가 이미 표시돼 있어요.</p></div>
           <div class="legend" aria-hidden="true">
             <span>한 번 → <b>좋아요</b></span><span>두 번 → <b>빼 주세요</b> (알레르기·거부감)</span><span>세 번 → 해제</span>
             <span><span class="layer" style="font-family: var(--mono)">TOP · MID · BASE</span> 주로 쓰이는 자리</span>
@@ -322,15 +374,15 @@
           <div class="note-groups" id="notes"></div>
         </section>
 
-        <section class="q" id="s7">
-          <div class="q-head"><span class="num">STEP 7 / 8</span><h2>향을 말로 표현하면</h2><p>원하는 향이 양쪽 단어 중 어디에 가까운지 골라 주세요. 가운데는 ‘상관없음’이에요.</p></div>
+        <section class="q" id="s8">
+          <div class="q-head"><span class="num">STEP 8 / 9</span><h2>향을 말로 표현하면</h2><p>원하는 향이 양쪽 단어 중 어디에 가까운지 골라 주세요. 가운데는 ‘상관없음’이에요.</p></div>
           <div class="scales" id="descriptors"></div>
           <div class="field"><span class="label">떠오르는 이미지 <small>최대 3개</small></span><div class="pills" id="moods"></div></div>
           <div class="field"><span class="label">향의 성별 이미지</span><div class="pills" id="gender"></div></div>
         </section>
 
-        <section class="q" id="s8">
-          <div class="q-head"><span class="num">STEP 8 / 8</span><h2>향수 경험과 메모</h2><p>좋았거나 별로였던 향수, 조심해야 할 성분을 적어 주세요.</p></div>
+        <section class="q" id="s9">
+          <div class="q-head"><span class="num">STEP 9 / 9</span><h2>향수 경험과 메모</h2><p>좋았거나 별로였던 향수, 조심해야 할 성분을 적어 주세요.</p></div>
           <div class="field"><label class="label" for="lovedPerfumes">좋아했던 향수 · 향</label><textarea id="lovedPerfumes" placeholder="브랜드와 이름, 또는 ‘비 온 뒤 숲 냄새’ 같은 표현도 좋아요"></textarea></div>
           <div class="field"><label class="label" for="dislikedPerfumes">별로였던 향수 · 이유</label><textarea id="dislikedPerfumes" placeholder="예: 달아서 머리가 아팠어요"></textarea></div>
           <div class="field"><label class="label" for="allergies">알레르기 · 피해야 할 성분</label><input type="text" id="allergies" placeholder="예: 리날룰, 참나무이끼(오크모스)" /></div>
@@ -359,9 +411,9 @@
 
     <aside class="result" aria-live="polite">
       <div class="card">
-        <div class="progress"><span>응답</span><div class="bar"><i id="progressBar" style="width:0%"></i></div><b id="progressText">0 / 8</b></div>
+        <div class="progress"><span>응답</span><div class="bar"><i id="progressBar" style="width:0%"></i></div><b id="progressText">0 / 9</b></div>
         <h2>나의 향 처방</h2>
-        <p class="empty" id="confidence">계열이나 어코드를 하나만 골라도 처방이 시작돼요.</p>
+        <p class="empty" id="confidence">좋아하는 향수나 계열·어코드를 하나만 골라도 처방이 시작돼요.</p>
         <div class="family-line" id="familyLine" hidden><span class="k">향 계열</span><span class="v" id="familyText"></span></div>
         <div id="barsWrap" hidden>
           <div class="family-line"><span class="k">메인 어코드</span></div>
@@ -391,7 +443,7 @@
     </aside>
   </div>
 
-  <p class="foot">어코드·향 계열·노트 분류와 지속력·확산력·계절 척도는 Fragrantica 향수 데이터베이스의 분류 방식을 참고했습니다. 처방은 상담을 위한 출발점이며, 실제 배합은 조향사가 시향으로 조정합니다. 작성 중인 답변은 이 브라우저에 임시 저장되고, ‘설문 제출하기’를 눌러야 매장 서버로 전송됩니다.</p>
+  <p class="foot">어코드·향 계열·노트 분류와 지속력·확산력·계절 척도는 Fragrantica 향수 데이터베이스의 분류 방식을 참고했습니다. 처방은 상담을 위한 출발점이며, 실제 배합은 조향사가 시향으로 조정합니다. 작성 중인 답변은 브라우저에 저장되지 않아 새로고침하면 모두 지워지고, ‘설문 제출하기’를 눌러야 매장 서버로 전송됩니다.</p>
 </div>
 
 <script type="module">
@@ -399,25 +451,20 @@
     ACCORDS, FAMILIES, NOTE_CATEGORIES, NOTES, SEASONS, DAYTIME, OCCASIONS, LONGEVITY, SILLAGE,
     GENDER, CONCENTRATIONS, SKIN, DESCRIPTORS, MOODS, MAX_MOODS, ACCORD_RATINGS,
     inkFor, emptyAnswers, sampleAnswers, analyze, formatSummary,
+    MAX_REF_PERFUMES, STEP_TITLES, perfumeById, perfumeNoteIds, refPerfumeList, searchPerfumes, skipsTasteSteps,
   } from './engine.js'
 
-  const STORAGE_KEY = 'perfume-survey:v1'
+  // 새로고침하면 처음부터 다시 쓴다. 답변은 이 페이지에만 있고 브라우저에 남기지 않는다
+  // 예전 버전이 남긴 저장분도 지운다.
+  try {
+    localStorage.removeItem('perfume-survey:v1')
+    localStorage.removeItem('perfume-survey:submitted')
+  } catch {}
   const $ = (id) => document.getElementById(id)
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c])
   const accordByKey = Object.fromEntries(ACCORDS.map((a) => [a.key, a]))
 
-  let answers = load()
-
-  function load() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY)
-      if (raw) return { ...emptyAnswers(), ...JSON.parse(raw) }
-    } catch {}
-    return emptyAnswers()
-  }
-  function save() {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(answers)) } catch {}
-  }
+  let answers = emptyAnswers()
 
   /* ---------- 입력 그리기 ---------- */
 
@@ -563,8 +610,167 @@
     })
   }
 
+  /* ---------- 좋아하는 향수 ---------- */
+
+  const noteKo = Object.fromEntries(NOTES.map((n) => [n.id, n.ko]))
+  const familyKo = Object.fromEntries(FAMILIES.map((f) => [f.id, f.ko]))
+  const TIERS = [['top', '탑'], ['middle', '미들'], ['base', '베이스']]
+  /** 기준 향수를 골라 건너뛴 단계를 다시 펼쳤는지 */
+  const expanded = { s5: false, s6: false }
+
+  function addRef(id) {
+    const p = perfumeById[id]
+    if (!p || answers.refPerfumes.includes(id) || answers.refPerfumes.length >= MAX_REF_PERFUMES) return false
+    const notes = { ...answers.notes }
+    // 고객이 이미 정해 둔 노트('빼 주세요' 포함)는 건드리지 않는다
+    for (const nid of perfumeNoteIds(p)) if (notes[nid] === undefined) notes[nid] = 1
+    answers.notes = notes
+    answers.refPerfumes = [...answers.refPerfumes, id]
+    answers.refNone = false
+    changed()
+    return true
+  }
+
+  function removeRef(id) {
+    const p = perfumeById[id]
+    const rest = answers.refPerfumes.filter((x) => x !== id)
+    const keep = new Set(rest.flatMap((x) => (perfumeById[x] ? perfumeNoteIds(perfumeById[x]) : [])))
+    const notes = { ...answers.notes }
+    // 이 향수 때문에 채워진 '좋아요'만 거둔다 ('빼 주세요'는 고객 뜻이라 남긴다)
+    if (p) for (const nid of perfumeNoteIds(p)) if (notes[nid] === 1 && !keep.has(nid)) delete notes[nid]
+    answers.notes = notes
+    answers.refPerfumes = rest
+    changed()
+  }
+
+  function renderPerfumeStep() {
+    const input = $('perfumeSearch')
+    const list = $('perfumeResults')
+    const hint = $('perfumeHint')
+    let results = []
+    let active = -1
+
+    const close = () => {
+      list.hidden = true
+      input.setAttribute('aria-expanded', 'false')
+      input.removeAttribute('aria-activedescendant')
+      active = -1
+    }
+    const draw = () => {
+      const q = input.value.trim()
+      if (!q) { close(); hint.textContent = ''; return }
+      results = searchPerfumes(q, 8)
+      const full = answers.refPerfumes.length >= MAX_REF_PERFUMES
+      hint.textContent = !results.length
+        ? '목록에 없는 향수예요. 9단계 ‘좋아했던 향수’ 칸에 적어 주시면 조향사가 참고할게요.'
+        : full ? `최대 ${MAX_REF_PERFUMES}개까지 고를 수 있어요. 하나를 빼고 다시 골라 주세요.` : ''
+      list.innerHTML = results.map((p, i) => {
+        const picked = answers.refPerfumes.includes(p.id)
+        return `<li role="presentation"><button type="button" role="option" id="pr-${i}" data-id="${p.id}" aria-selected="${i === active}" ${picked || full ? 'disabled' : ''}>` +
+          `<span>${esc(p.brandKo)} · ${esc(p.nameKo)}${picked ? ' ✓' : ''}</span><small>${esc(p.brand)} ${esc(p.name)}</small></button></li>`
+      }).join('')
+      list.hidden = !results.length
+      input.setAttribute('aria-expanded', String(!list.hidden))
+      if (active >= 0) input.setAttribute('aria-activedescendant', `pr-${active}`)
+      else input.removeAttribute('aria-activedescendant')
+    }
+    const pick = (id) => {
+      const p = perfumeById[id]
+      if (!addRef(id)) return
+      input.value = ''
+      close()
+      hint.textContent = `‘${p.nameKo}’의 노트를 채웠어요. 빼고 싶은 노트를 눌러 주세요.`
+      input.focus()
+    }
+
+    input.addEventListener('input', () => { active = -1; draw() })
+    input.addEventListener('focus', draw)
+    input.addEventListener('keydown', (e) => {
+      // 검색칸에서 Enter 가 설문 제출로 이어지지 않게 한다
+      if (e.key === 'Enter') {
+        e.preventDefault()
+        const p = results[active < 0 ? 0 : active]
+        if (!list.hidden && p) pick(p.id)
+        return
+      }
+      if (list.hidden) return
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault()
+        active = (active + (e.key === 'ArrowDown' ? 1 : -1) + results.length) % results.length
+        draw()
+      } else if (e.key === 'Escape') {
+        close()
+      }
+    })
+    list.addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-id]')
+      if (btn && !btn.disabled) pick(btn.dataset.id)
+    })
+    document.addEventListener('click', (e) => { if (!e.target.closest('.search-field')) close() })
+
+    $('refList').addEventListener('click', (e) => {
+      const remove = e.target.closest('[data-remove]')
+      if (remove) {
+        const p = perfumeById[remove.dataset.remove]
+        removeRef(remove.dataset.remove)
+        hint.textContent = p ? `‘${p.nameKo}’를 뺐어요.` : ''
+        input.focus()
+        return
+      }
+      const chip = e.target.closest('button[data-note]')
+      if (!chip) return
+      const nid = chip.dataset.note
+      answers.notes = { ...answers.notes, [nid]: answers.notes[nid] === 1 ? -1 : 1 }
+      changed()
+      // 다시 그린 뒤에도 같은 칩에 초점을 둔다
+      document.getElementById(chip.id)?.focus()
+    })
+    $('refNone').addEventListener('change', (e) => { answers.refNone = e.target.checked; changed() })
+
+    syncers.push(() => {
+      const refs = refPerfumeList(answers)
+      $('refList').innerHTML = refs.map((p) => {
+        const tiers = TIERS.filter(([k]) => p[k].length).map(([k, ko]) => `<div class="ref-tier"><span>${ko}</span><div class="chips">${
+          p[k].map((nid) => {
+            const v = answers.notes[nid]
+            const state = v === 1 ? 'like' : v === -1 ? 'avoid' : 'none'
+            return `<button type="button" class="note" id="ref-${p.id}-${nid}" data-note="${nid}" data-state="${state}" aria-pressed="${v === 1}" ` +
+              `aria-label="${esc(noteKo[nid])}: ${state === 'avoid' ? '빼 주세요' : state === 'like' ? '유지' : '선택 안 함'}">${esc(noteKo[nid])}</button>`
+          }).join('')}</div></div>`).join('')
+        const other = p.other?.length
+          ? `<div class="ref-tier"><span>참고</span><div class="chips">${p.other.map((o) => `<span class="other">${esc(o)}</span>`).join('')}</div></div>`
+          : ''
+        return `<div class="ref" data-id="${p.id}">
+          <div class="ref-head"><h3>${esc(p.nameKo)}<small>${esc(p.brandKo)} · ${esc(p.brand)} ${esc(p.name)}</small><span class="fam-tag">${esc(familyKo[p.family] ?? '')}</span></h3>
+            <button type="button" class="btn sm ghost" data-remove="${p.id}" aria-label="${esc(p.nameKo)} 빼기">✕</button></div>
+          ${tiers}${other}
+        </div>`
+      }).join('')
+      $('refLegend').hidden = !refs.length
+      $('refNone').checked = !refs.length && answers.refNone
+      $('refNone').disabled = refs.length > 0
+
+      const skip = skipsTasteSteps(answers)
+      for (const id of ['s5', 's6']) {
+        const sec = $(id)
+        sec.querySelector('.skipnote').hidden = !skip
+        sec.classList.toggle('skipped', skip && !expanded[id])
+        const btn = sec.querySelector('[data-expand]')
+        btn.textContent = expanded[id] ? '접기' : '직접 고르기'
+        btn.setAttribute('aria-expanded', String(expanded[id]))
+      }
+    })
+  }
+
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-expand]')
+    if (!btn) return
+    expanded[btn.dataset.expand] = !expanded[btn.dataset.expand]
+    syncAll()
+  })
+
   function renderSteps() {
-    const titles = ['기본 정보', '계절·시간', '지속력', '향 계열', '어코드', '노트', '표현', '경험']
+    const titles = STEP_TITLES
     $('steps').innerHTML = titles.map((t, i) => `<li><a href="#s${i + 1}" id="step-${i + 1}"><span class="dot"></span>${i + 1}. ${t}</a></li>`).join('')
   }
 
@@ -576,9 +782,14 @@
     $('progressBar').style.width = `${(done / total) * 100}%`
     $('progressText').textContent = `${done} / ${total}`
     sections.forEach((ok, i) => $(`step-${i + 1}`).classList.toggle('done', ok))
+    const skip = skipsTasteSteps(answers)
+    for (const n of [5, 6]) {
+      $(`step-${n}`).classList.toggle('skipped', skip)
+      $(`step-${n}`).title = skip ? '좋아하는 향수로 채워져 건너뛰어도 돼요' : ''
+    }
 
     const conf = {
-      none: '계열이나 어코드를 하나만 골라도 처방이 시작돼요.',
+      none: '좋아하는 향수나 계열·어코드를 하나만 골라도 처방이 시작돼요.',
       low: '아직 답이 적어요. 계열·어코드·노트를 더 고르면 처방이 정확해져요.',
       mid: '윤곽이 잡혔어요. 남은 단계를 채우면 더 다듬어집니다.',
       high: '충분히 답해 주셨어요. 이 처방으로 시향지를 준비합니다.',
@@ -621,7 +832,7 @@
   /* ---------- 공통 ---------- */
 
   function syncAll() { for (const s of syncers) s() }
-  function changed() { save(); syncAll(); renderResult() }
+  function changed() { syncAll(); renderResult() }
 
   function setStatus(msg) { $('status').textContent = msg }
 
@@ -672,12 +883,10 @@
     $('consent').checked = false
     showReceipt(null)
     submitStatus('')
-    try { localStorage.removeItem(SUBMITTED_KEY) } catch {}
     $('copyFallback').hidden = true
     changed()
     setStatus('응답을 모두 지웠어요.')
   })
-  const SUBMITTED_KEY = 'perfume-survey:submitted'
   function showReceipt(id) {
     $('receipt').hidden = !id
     $('receiptId').textContent = id ?? ''
@@ -695,7 +904,7 @@
       return
     }
     if (analyze(answers).confidence === 'none') {
-      submitStatus('향 계열(4단계)이나 어코드(5단계)를 하나 이상 골라 주세요.', true)
+      submitStatus('좋아하는 향수(2단계)를 고르거나, 향 계열(5단계)·어코드(6단계)를 하나 이상 골라 주세요.', true)
       return
     }
     const btn = $('submitBtn')
@@ -710,7 +919,6 @@
       const body = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(body.message || `서버 오류 (${res.status})`)
       showReceipt(body.id)
-      try { localStorage.setItem(SUBMITTED_KEY, body.id) } catch {}
       submitStatus('설문을 보냈어요. 감사합니다!')
     } catch (err) {
       const offline = err instanceof TypeError
@@ -719,7 +927,6 @@
       btn.disabled = false
     }
   })
-  try { showReceipt(localStorage.getItem(SUBMITTED_KEY)) } catch {}
 
   renderSteps()
   pills('forWhom', [{ id: 'self', ko: '나를 위한 향수' }, { id: 'gift', ko: '선물' }], { key: 'forWhom' })
@@ -734,6 +941,7 @@
   pills('sillage', SILLAGE, { key: 'sillage', numeric: true })
   pills('skin', SKIN, { key: 'skin' })
   pills('concentration', [{ id: 'auto', ko: '추천해 주세요' }, ...CONCENTRATIONS.map((c) => ({ id: c.id, ko: c.ko, hint: c.range }))], { key: 'concentration' })
+  renderPerfumeStep()
   renderFamilies()
   renderAccords()
   renderNotes()
@@ -742,8 +950,13 @@
   pills('gender', GENDER, { key: 'gender', numeric: true })
   for (const id of ['name', 'contact', 'lovedPerfumes', 'dislikedPerfumes', 'allergies', 'memo']) textField(id)
 
+  // 새로고침 때 브라우저가 입력칸 값을 되살리는 경우가 있어 한 번 더 비운다
+  $('survey').reset()
+  $('perfumeSearch').value = ''
   syncAll()
   renderResult()
+  // 뒤로 가기로 돌아온 페이지(bfcache)도 새로 시작한다
+  window.addEventListener('pageshow', (e) => { if (e.persisted) location.reload() })
 </script>
 </body>
 </html>

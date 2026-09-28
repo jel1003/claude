@@ -31,7 +31,7 @@
   }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.6 var(--sans); padding-inline: 16px; }
-  button, input { font: inherit; color: inherit; }
+  button, input, select, textarea { font: inherit; color: inherit; }
   :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .wrap { max-width: 1100px; margin: 0 auto; padding-block: 32px 64px; display: grid; gap: 20px; }
   h1 { font: 700 30px/1.25 var(--serif); margin: 0; }
@@ -52,9 +52,52 @@
   tr.row:hover td { background: var(--accent-soft); }
   tr.row[aria-expanded='true'] td { background: var(--accent-soft); }
   tr.detail td { background: var(--bg); }
+  /* 표는 가로로 스크롤되지만 펼친 내용은 화면 폭에 맞춰 제자리에 둔다 */
+  .detail-inner { position: sticky; left: 14px; max-width: calc(100vw - 62px); }
   pre { margin: 0; white-space: pre-wrap; font: 13px/1.6 var(--mono); }
   .detail-actions { margin-top: 10px; display: flex; gap: 8px; }
   .empty { padding: 28px; text-align: center; color: var(--dim); }
+  .badge { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; background: var(--surface-2); color: var(--dim); white-space: nowrap; }
+  .badge.final { background: var(--accent); color: var(--accent-ink); }
+
+  /* 실제 레시피 */
+  .recipes { margin-top: 18px; display: grid; gap: 12px; }
+  .recipes-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .recipes-head h2 { font: 700 18px var(--serif); margin: 0 auto 0 0; }
+  .recipe { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px; display: grid; gap: 12px; }
+  .recipe.is-final { border-color: var(--accent); }
+  .fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px 10px; }
+  .field { display: grid; gap: 3px; font-size: 12px; color: var(--dim); }
+  .field input, .field select, .recipe textarea, .ing input, .ing select {
+    padding: 7px 9px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); font-size: 14px; min-width: 0;
+  }
+  .field.check { display: flex; align-items: center; gap: 6px; align-self: end; padding-bottom: 8px; color: var(--ink); font-size: 14px; }
+  .recipe textarea { width: 100%; min-height: 56px; resize: vertical; }
+  .ing-wrap { overflow-x: auto; }
+  table.ing { min-width: 0; }
+  table.ing th, table.ing td { padding: 5px 6px; border-bottom: 0; background: none; vertical-align: middle; }
+  table.ing th { background: none; padding-bottom: 0; text-transform: none; }
+  table.ing input[data-f='name'] { width: 100%; min-width: 88px; }
+  table.ing input[data-f='grams'], table.ing input[data-f='drops'] { width: 72px; text-align: right; font-variant-numeric: tabular-nums; }
+  table.ing input[data-f='drops'] { width: 60px; }
+  table.ing input[readonly] { background: var(--accent-soft); border-color: transparent; color: var(--ink); }
+  table.ing td.pct { font: 13px var(--mono); color: var(--dim); text-align: right; white-space: nowrap; width: 56px; }
+  @media (max-width: 520px) {
+    table.ing th, table.ing td { padding: 4px 2px; }
+    .ing input, .ing select { padding: 6px 5px; font-size: 13px; }
+    table.ing input[data-f='grams'] { width: 56px; }
+    table.ing input[data-f='drops'] { width: 44px; }
+    table.ing .pct { display: none; }
+    table.ing select[data-f='layer'] { width: 62px; }
+    .recipe { padding: 10px; }
+  }
+  .calc { font: 13px var(--mono); color: var(--dim); margin: 0; }
+  .row-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+  .btn.sm { padding: 5px 10px; font-size: 13px; border-radius: 8px; }
+  .btn.ghost { border-color: transparent; background: none; color: var(--dim); }
+  .btn.danger { color: var(--avoid); }
+  .save-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .dirty { color: var(--avoid); font-size: 13px; }
 </style>
 </head>
 <body>
@@ -74,14 +117,15 @@
 
   <div class="table-wrap">
     <table>
-      <thead><tr><th>접수 시각</th><th>접수번호</th><th>이름</th><th>연락처</th><th>향 계열</th><th>농도</th></tr></thead>
-      <tbody id="rows"><tr><td colspan="6" class="empty">관리자 키를 넣고 불러오기를 눌러 주세요.</td></tr></tbody>
+      <thead><tr><th>접수 시각</th><th>접수번호</th><th>이름</th><th>연락처</th><th>향 계열</th><th>농도</th><th>레시피</th></tr></thead>
+      <tbody id="rows"><tr><td colspan="7" class="empty">관리자 키를 넣고 불러오기를 눌러 주세요.</td></tr></tbody>
     </table>
   </div>
 </div>
+<datalist id="note-list"></datalist>
 
 <script type="module">
-  import { FAMILIES, CONCENTRATIONS } from './engine.js'
+  import { FAMILIES, CONCENTRATIONS, NOTES, suggestRecipe, gramsFromDrops } from './engine.js'
 
   const $ = (id) => document.getElementById(id)
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c])
@@ -89,7 +133,16 @@
   const concKo = (id) => CONCENTRATIONS.find((c) => c.id === id)?.ko ?? id
   const when = (iso) => new Date(iso).toLocaleString('ko-KR', { dateStyle: 'short', timeStyle: 'short' })
   const KEY_STORE = 'perfume-admin:key'
+  const LAYERS = [['', '—'], ['top', '탑'], ['middle', '미들'], ['base', '베이스']]
+  const layerKo = (id) => LAYERS.find(([v]) => v === id)?.[1] ?? '—'
+  const g2 = (n) => `${(Math.round((Number(n) || 0) * 100) / 100).toFixed(2)}g`
+  const today = () => new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10)
   let responses = []
+  /** 응답별 편집 중인 레시피 (저장 전) */
+  let drafts = []
+  let dirty = []
+
+  $('note-list').innerHTML = NOTES.map((n) => `<option value="${esc(n.ko)}"></option>`).join('')
 
   try { $('key').value = sessionStorage.getItem(KEY_STORE) ?? '' } catch {}
 
@@ -108,6 +161,8 @@
       if (!res.ok) throw new Error(body.message || `서버 오류 (${res.status})`)
       try { sessionStorage.setItem(KEY_STORE, key) } catch {}
       responses = body.responses
+      dirty = responses.map(() => false)
+      drafts = responses.map((r, i) => (r.recipes ?? []).map((x) => fromSaved(x, r.prescription, () => { dirty[i] = true })))
       render()
       const more = body.total > responses.length ? ` (전체 ${body.total}개 중 최근 ${responses.length}개)` : ''
       status(`응답 ${responses.length}개${more}`)
@@ -119,7 +174,7 @@
 
   function render() {
     if (!responses.length) {
-      $('rows').innerHTML = '<tr><td colspan="6" class="empty">아직 들어온 응답이 없어요.</td></tr>'
+      $('rows').innerHTML = '<tr><td colspan="7" class="empty">아직 들어온 응답이 없어요.</td></tr>'
       return
     }
     $('rows').innerHTML = responses.map((r, i) => `
@@ -130,11 +185,255 @@
         <td>${esc(r.answers.contact || '—')}</td>
         <td>${esc(r.prescription.family.map(famKo).join(' + ') || '—')}</td>
         <td>${esc(concKo(r.prescription.concentration))}</td>
+        <td id="badge-${i}">${badge(r.recipes)}</td>
       </tr>
-      <tr class="detail" id="detail-${i}" hidden><td colspan="6">
+      <tr class="detail" id="detail-${i}" hidden><td colspan="7"><div class="detail-inner">
         <pre>${esc(r.summary)}</pre>
         <div class="detail-actions"><button type="button" class="btn" data-copy="${i}">요약 복사</button></div>
-      </td></tr>`).join('')
+        <section class="recipes" id="recipes-${i}" aria-label="실제 레시피">${recipesHtml(i)}</section>
+      </div></td></tr>`).join('')
+  }
+
+  // ───────── 실제 레시피 ─────────
+
+  function badge(recipes = []) {
+    if (!recipes.length) return '<span class="badge">—</span>'
+    const fin = recipes.find((x) => x.final)
+    return fin ? `<span class="badge final">최종 ${esc(fin.label || '')}</span>` : `<span class="badge">시안 ${recipes.length}</span>`
+  }
+
+  const DEFAULT_TOTAL_G = 30
+  const blankIngredient = (layer = '') => ({ name: '', layer, drops: 0, grams: 0 })
+
+  /** 방울을 하나라도 적었으면 g 은 방울 비율로 계산한다 */
+  const dropMode = (recipe) => recipe.ingredients.some((g) => g.name.trim() && g.drops > 0)
+
+  /** 방울 비율 × 향료 목표량(완성 중량 × 부향률)으로 g 을 다시 계산한다 */
+  function recompute(recipe) {
+    if (!dropMode(recipe)) return
+    const named = recipe.ingredients.map((g) => (g.name.trim() ? Number(g.drops) || 0 : 0))
+    gramsFromDrops(named, oilTarget(recipe)).forEach((grams, k) => { recipe.ingredients[k].grams = grams })
+  }
+
+  /** 추천 처방으로 방울 수와 g 을 채운다 */
+  function applySuggestion(recipe, prescription, keepStrength = false) {
+    const s = suggestRecipe(prescription, recipe.totalG || DEFAULT_TOTAL_G, keepStrength ? recipe.strengthPct : undefined)
+    recipe.strengthPct = s.strengthPct
+    recipe.ingredients = s.ingredients
+    return recipe
+  }
+
+  /**
+   * 저장된 레시피를 편집용으로 옮긴다. 예전 형식(ml · 방울 단위)은 지금 형식으로 바꾸고,
+   * 양이 하나도 안 적혀 있으면 추천 비율로 채운 뒤 저장 안 된 상태로 표시한다.
+   */
+  function fromSaved(saved, prescription, onFilled) {
+    const x = structuredClone(saved)
+    x.totalG = x.totalG ?? x.volumeMl ?? 0
+    delete x.volumeMl
+    x.ingredients = (x.ingredients ?? []).map((g) => ({
+      name: g.name,
+      layer: g.layer,
+      drops: g.drops ?? (g.unit === 'drop' ? g.amount : 0) ?? 0,
+      grams: g.grams ?? (g.unit === 'g' ? g.amount : 0) ?? 0,
+    }))
+    if (x.ingredients.length && x.ingredients.every((g) => !g.grams && !g.drops)) {
+      applySuggestion(x, prescription, true)
+      onFilled()
+    }
+    recompute(x)
+    return x
+  }
+
+  const newRecipe = (n, prescription) =>
+    applySuggestion({ label: `${n}차 시안`, madeAt: today(), totalG: DEFAULT_TOTAL_G, strengthPct: 0, ingredients: [], memo: '', final: false }, prescription)
+
+  const dropSum = (recipe) => recipe.ingredients.filter((g) => g.name.trim()).reduce((s, g) => s + (Number(g.drops) || 0), 0)
+  const oilSum = (recipe) => recipe.ingredients.filter((g) => g.name.trim()).reduce((s, g) => s + (Number(g.grams) || 0), 0)
+  const oilTarget = (recipe) => ((Number(recipe.totalG) || 0) * (Number(recipe.strengthPct) || 0)) / 100
+
+  function calcLine(recipe) {
+    const sum = oilSum(recipe)
+    const target = oilTarget(recipe)
+    const parts = [dropMode(recipe) ? `시안 ${dropSum(recipe)}방울 → 향료 ${g2(sum)}` : `향료 합계 ${g2(sum)}`]
+    if (target) {
+      const diff = sum - target
+      parts.push(`목표 ${g2(target)} (${recipe.totalG}g × ${recipe.strengthPct}%)${Math.abs(diff) >= 0.005 ? ` · ${diff > 0 ? '+' : '−'}${g2(Math.abs(diff))}` : ''}`)
+      parts.push(`에탄올 ${g2((Number(recipe.totalG) || 0) - sum)}`)
+    }
+    return parts.join(' · ')
+  }
+
+  function pctText(recipe, g) {
+    const total = oilSum(recipe)
+    if (!total || !g.name.trim()) return ''
+    return `${(((Number(g.grams) || 0) / total) * 100).toFixed(1)}%`
+  }
+
+  function recipesHtml(i) {
+    const list = drafts[i]
+    const cards = list.map((x, j) => `
+      <div class="recipe${x.final ? ' is-final' : ''}" data-r="${i}" data-j="${j}">
+        <div class="fields">
+          <label class="field">시안 이름<input data-f="label" value="${esc(x.label)}" maxlength="60" placeholder="예: 1차 시안" /></label>
+          <label class="field">만든 날<input type="date" data-f="madeAt" value="${esc(x.madeAt)}" /></label>
+          <label class="field">완성 중량 (g)<input type="number" inputmode="decimal" min="0" step="any" data-f="totalG" value="${x.totalG || ''}" /></label>
+          <label class="field">부향률 (중량 %)<input type="number" inputmode="decimal" min="0" max="100" step="any" data-f="strengthPct" value="${x.strengthPct || ''}" /></label>
+          <label class="field check"><input type="checkbox" data-f="final" ${x.final ? 'checked' : ''} /> 최종 (고객 전달본)</label>
+        </div>
+        <div class="ing-wrap">
+          <table class="ing">
+            <thead><tr><th>재료</th><th>위치</th><th>방울</th><th>g</th><th class="pct">비율</th><th></th></tr></thead>
+            <tbody>${x.ingredients.map((g, k) => `
+              <tr data-k="${k}">
+                <td><input data-f="name" list="note-list" value="${esc(g.name)}" maxlength="80" placeholder="재료 이름" aria-label="재료 이름" /></td>
+                <td><select data-f="layer" aria-label="노트 위치">${LAYERS.map(([v, t]) => `<option value="${v}" ${g.layer === v ? 'selected' : ''}>${t}</option>`).join('')}</select></td>
+                <td><input type="number" inputmode="numeric" min="0" step="1" data-f="drops" value="${g.drops || ''}" aria-label="방울 수" /></td>
+                <td><input type="number" inputmode="decimal" min="0" step="0.01" data-f="grams" value="${g.grams || ''}" aria-label="양 (g)" ${dropMode(x) ? 'readonly title="방울 비율로 자동 계산돼요. 방울을 모두 지우면 직접 적을 수 있어요."' : ''} /></td>
+                <td class="pct" data-pct>${pctText(x, g)}</td>
+                <td><button type="button" class="btn sm ghost danger" data-act="del-ing" aria-label="재료 삭제">✕</button></td>
+              </tr>`).join('') || '<tr><td colspan="6" class="empty" style="padding:12px">재료를 추가해 주세요.</td></tr>'}
+            </tbody>
+          </table>
+        </div>
+        <p class="calc" data-calc>${esc(calcLine(x))}</p>
+        <div class="row-actions">
+          <button type="button" class="btn sm" data-act="add-ing">+ 재료</button>
+          <button type="button" class="btn sm" data-act="fill">추천 비율로 다시 채우기</button>
+          <button type="button" class="btn sm" data-act="dup">이 시안 복제</button>
+          <button type="button" class="btn sm ghost danger" data-act="del-recipe">시안 삭제</button>
+        </div>
+        <label class="field">메모 (조정 내용 · 고객 반응)<textarea data-f="memo" maxlength="1000">${esc(x.memo)}</textarea></label>
+      </div>`).join('')
+    return `
+      <div class="recipes-head">
+        <h2>실제 레시피</h2>
+        <button type="button" class="btn sm" data-act="add-recipe" data-r="${i}">+ 시안 추가</button>
+      </div>
+      ${list.length ? '<p class="calc">방울 수로 시안을 테스트하면 g 은 방울 비율 × 향료 목표량(완성 중량 × 부향률)으로 자동 계산돼요.</p>' : ''}
+      ${cards || '<p class="calc">아직 기록한 레시피가 없어요. “시안 추가”로 실제 조향 내용을 적어 두세요.</p>'}
+      ${list.length || responses[i].recipes?.length ? `
+      <div class="save-bar">
+        <button type="button" class="btn primary" data-act="save" data-r="${i}">레시피 저장</button>
+        <button type="button" class="btn" data-act="copy-recipe" data-r="${i}" ${list.length ? '' : 'disabled'}>레시피 복사</button>
+        <span class="dirty" id="dirty-${i}" ${dirty[i] ? '' : 'hidden'}>저장하지 않은 변경이 있어요</span>
+      </div>` : ''}`
+  }
+
+  function rerenderRecipes(i) {
+    $(`recipes-${i}`).innerHTML = recipesHtml(i)
+  }
+
+  function markDirty(i, on = true) {
+    dirty[i] = on
+    const el = $(`dirty-${i}`)
+    if (el) el.hidden = !on
+  }
+
+  function formatRecipe(x) {
+    const head = [x.label || '시안', x.final ? '최종' : '', x.madeAt, x.totalG ? `완성 ${x.totalG}g` : '', x.strengthPct ? `부향률 ${x.strengthPct}%` : '']
+      .filter(Boolean).join(' · ')
+    const lines = x.ingredients.map((g) => {
+      const p = pctText(x, g)
+      return `  ${layerKo(g.layer).padEnd(3, ' ')} ${g.name} ${g.drops ? `${g.drops}방울 → ` : ''}${g2(g.grams)}${p ? ` (${p})` : ''}`
+    })
+    const ethanol = (Number(x.totalG) || 0) - oilSum(x)
+    return [`[${head}]`, ...lines, x.totalG ? `  에탄올 ${g2(ethanol)}` : '', x.memo ? `  메모: ${x.memo}` : ''].filter(Boolean).join('\n')
+  }
+
+  function onRecipeInput(e) {
+    const card = e.target.closest('.recipe')
+    const f = e.target.dataset.f
+    if (!card || !f) return
+    const i = Number(card.dataset.r)
+    const x = drafts[i][Number(card.dataset.j)]
+    const tr = e.target.closest('tr[data-k]')
+    const wasDropMode = dropMode(x)
+    if (tr) {
+      const g = x.ingredients[Number(tr.dataset.k)]
+      g[f] = f === 'grams' || f === 'drops' ? Number(e.target.value) || 0 : e.target.value
+    } else if (f === 'final') {
+      // 최종본은 하나만
+      drafts[i].forEach((other) => { other.final = false })
+      x.final = e.target.checked
+      markDirty(i)
+      return rerenderRecipes(i)
+    } else {
+      x[f] = f === 'totalG' || f === 'strengthPct' ? Number(e.target.value) || 0 : e.target.value
+    }
+    recompute(x)
+    // 입력 중인 칸을 다시 그리지 않고 계산값만 고친다
+    const auto = dropMode(x)
+    card.querySelectorAll('tr[data-k]').forEach((row) => {
+      const g = x.ingredients[Number(row.dataset.k)]
+      const gramsInput = row.querySelector('[data-f="grams"]')
+      if (gramsInput !== e.target) gramsInput.value = g.grams || ''
+      if (auto !== wasDropMode) gramsInput.readOnly = auto
+      row.querySelector('[data-pct]').textContent = pctText(x, g)
+    })
+    card.querySelector('[data-calc]').textContent = calcLine(x)
+    markDirty(i)
+  }
+
+  async function saveRecipes(i, btn) {
+    const key = $('key').value.trim()
+    btn.disabled = true
+    status('레시피 저장 중…')
+    try {
+      const res = await fetch(`/api/perfume-responses?id=${encodeURIComponent(responses[i].id)}`, {
+        method: 'PUT',
+        headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json' },
+        body: JSON.stringify({ recipes: drafts[i] }),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body.message || `서버 오류 (${res.status})`)
+      responses[i] = body.response
+      drafts[i] = (body.response.recipes ?? []).map((x) => fromSaved(x, body.response.prescription, () => {}))
+      dirty[i] = false
+      rerenderRecipes(i)
+      $(`badge-${i}`).innerHTML = badge(body.response.recipes)
+      status(`${responses[i].answers.name || responses[i].id} 님 레시피를 저장했어요.`)
+    } catch (err) {
+      btn.disabled = false
+      status(`저장하지 못했어요: ${err.message}`, true)
+    }
+  }
+
+  async function onRecipeAction(btn) {
+    const act = btn.dataset.act
+    const card = btn.closest('.recipe')
+    const i = Number(card?.dataset.r ?? btn.dataset.r)
+    const list = drafts[i]
+    const x = card ? list[Number(card.dataset.j)] : null
+    if (act === 'save') return saveRecipes(i, btn)
+    if (act === 'copy-recipe') {
+      const r = responses[i]
+      const text = [`${r.answers.name || '고객'} (${r.id})`, ...list.map(formatRecipe)].join('\n\n')
+      try {
+        await navigator.clipboard.writeText(text)
+        status('레시피를 복사했어요.')
+      } catch {
+        status('복사가 막혀 있어요.', true)
+      }
+      return
+    }
+    if (act === 'add-recipe') list.push(newRecipe(list.length + 1, responses[i].prescription))
+    if (act === 'add-ing') x.ingredients.push(blankIngredient())
+    if (act === 'del-ing') {
+      x.ingredients.splice(Number(btn.closest('tr').dataset.k), 1)
+      recompute(x)
+    }
+    if (act === 'dup') list.push({ ...structuredClone(x), label: `${list.length + 1}차 시안`, madeAt: today(), final: false })
+    if (act === 'del-recipe') {
+      if (!confirm(`“${x.label || '이 시안'}”을 지울까요? 저장을 눌러야 서버에서도 지워져요.`)) return
+      list.splice(Number(card.dataset.j), 1)
+    }
+    if (act === 'fill') {
+      if (x.ingredients.some((g) => g.name.trim()) && !confirm('지금 적은 재료와 방울 · 양을 추천 비율로 바꿀까요?')) return
+      applySuggestion(x, responses[i].prescription, true)
+    }
+    markDirty(i)
+    rerenderRecipes(i)
   }
 
   function toggle(row) {
@@ -143,7 +442,11 @@
     $(`detail-${row.dataset.i}`).hidden = !open
   }
 
+  $('rows').addEventListener('input', onRecipeInput)
   $('rows').addEventListener('click', async (e) => {
+    const actBtn = e.target.closest('[data-act]')
+    if (actBtn) return onRecipeAction(actBtn)
+    if (e.target.closest('.recipes')) return
     const copyBtn = e.target.closest('[data-copy]')
     if (copyBtn) {
       try {
@@ -159,6 +462,7 @@
   })
   $('rows').addEventListener('keydown', (e) => {
     const row = e.target.closest('tr.row')
+    if (row && e.target !== row) return
     if (row && (e.key === 'Enter' || e.key === ' ')) {
       e.preventDefault()
       toggle(row)
@@ -172,12 +476,13 @@
 
   $('csv').addEventListener('click', () => {
     const cell = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`
-    const header = ['접수 시각', '접수번호', '이름', '연락처', '향 계열', '탑', '미들', '베이스', '농도', '알레르기', '메모', '요약']
+    const header = ['접수 시각', '접수번호', '이름', '연락처', '향 계열', '탑', '미들', '베이스', '농도', '알레르기', '메모', '요약', '실제 레시피']
     const lines = responses.map((r) => [
       r.createdAt, r.id, r.answers.name, r.answers.contact,
       r.prescription.family.map(famKo).join(' + '),
       r.prescription.top.join(' '), r.prescription.middle.join(' '), r.prescription.base.join(' '),
       concKo(r.prescription.concentration), r.answers.allergies, r.answers.memo, r.summary,
+      (r.recipes ?? []).map(formatRecipe).join('\n\n'),
     ].map(cell).join(','))
     // 엑셀에서 한글이 깨지지 않도록 BOM 을 붙인다
     const blob = new Blob(['﻿' + [header.map(cell).join(','), ...lines].join('\r\n')], { type: 'text/csv;charset=utf-8' })
@@ -187,6 +492,8 @@
     a.click()
     URL.revokeObjectURL(a.href)
   })
+
+  window.addEventListener('beforeunload', (e) => { if (dirty.some(Boolean)) e.preventDefault() })
 
   if ($('key').value) load()
 </script>

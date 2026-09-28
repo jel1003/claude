@@ -1,4 +1,9 @@
 import {
+  PERFUMES,
+  STEP_TITLES,
+  refPerfumeChanges,
+  searchPerfumes,
+  sectionProgress,
   ACCORDS,
   DESCRIPTORS,
   FAMILIES,
@@ -10,6 +15,8 @@ import {
   emptyAnswers,
   formatSummary,
   layerRatio,
+  gramsFromDrops,
+  suggestRecipe,
   recommendConcentration,
   sampleAnswers,
 } from '../public/perfume-survey/engine.js'
@@ -137,5 +144,115 @@ describe('비율과 농도', () => {
     a.longevity = 5
     a.concentration = 'edc'
     expect(recommendConcentration(a)).toMatchObject({ id: 'edc', reason: '고객이 직접 고른 농도' })
+  })
+})
+
+describe('실제 레시피 초안 (방울 → g)', () => {
+  const prescription = {
+    top: ['bergamot', 'lemon'],
+    middle: ['rose'],
+    base: ['cedar', 'musk', 'amber'],
+    ratio: { top: 30, middle: 40, base: 30 },
+    concentration: 'edp',
+  }
+  const sum = (xs: number[]) => xs.reduce((s, x) => s + x, 0)
+
+  it('총 방울 수를 층별 추천 비율로 나누고, 방울 비율대로 향료 g 을 나눈다', () => {
+    const r = suggestRecipe(prescription, 30)
+    expect(r.strengthPct).toBe(18)
+    expect(r.oilG).toBe(5.4)
+    const drops = r.ingredients.map((g) => g.drops)
+    expect(sum(drops)).toBe(30)
+    expect(drops.every((d) => Number.isInteger(d) && d >= 1)).toBe(true)
+    // 탑 30% · 미들 40% · 베이스 30% → 9 · 12 · 9 방울
+    const layerDrops = (l: string) => sum(r.ingredients.filter((g) => g.layer === l).map((g) => g.drops))
+    expect([layerDrops('top'), layerDrops('middle'), layerDrops('base')]).toEqual([9, 12, 9])
+    expect(sum(r.ingredients.map((g) => g.grams))).toBeCloseTo(5.4, 5)
+    expect(r.ingredients[0]).toEqual({ name: '베르가못', layer: 'top', drops: 5, grams: 0.9 })
+  })
+
+  it('노트가 많아도 최소 1방울씩 준다', () => {
+    const r = suggestRecipe(prescription, 30, 18, 4)
+    expect(r.ingredients.every((g) => g.drops >= 1)).toBe(true)
+  })
+})
+
+describe('방울 → g 변환', () => {
+  it('방울 비율대로 향료 총량을 나눈다', () => {
+    expect(gramsFromDrops([3, 5, 2], 5)).toEqual([1.5, 2.5, 1])
+    // 반올림 오차는 마지막 재료가 맞춘다
+    const g = gramsFromDrops([1, 1, 1], 1)
+    expect(g.reduce((s, x) => s + x, 0)).toBeCloseTo(1, 5)
+  })
+
+  it('방울이 0인 재료는 0g, 방울이 없거나 목표가 0이면 모두 0g', () => {
+    expect(gramsFromDrops([2, 0, 2], 4)).toEqual([2, 0, 2])
+    expect(gramsFromDrops([0, 0], 4)).toEqual([0, 0])
+    expect(gramsFromDrops([1, 2], 0)).toEqual([0, 0])
+  })
+})
+
+describe('좋아하는 향수 목록', () => {
+  const noteIds = new Set(NOTES.map((n) => n.id))
+  const familyIds = new Set(FAMILIES.map((f) => f.id))
+
+  it('id 가 겹치지 않고, 노트와 계열이 설문 목록에 있는 것만 쓴다', () => {
+    expect(new Set(PERFUMES.map((p) => p.id)).size).toBe(PERFUMES.length)
+    for (const p of PERFUMES) {
+      expect(familyIds.has(p.family), `${p.id} family`).toBe(true)
+      for (const id of [...p.top, ...p.middle, ...p.base]) expect(noteIds.has(id), `${p.id}: ${id}`).toBe(true)
+      expect(p.top.length + p.middle.length + p.base.length, p.id).toBeGreaterThan(0)
+    }
+  })
+
+  it('한글 · 영문 · 브랜드 · 띄어쓰기 없이도 찾는다', () => {
+    expect(searchPerfumes('상탈')[0]?.id).toBe('ll-santal-33')
+    expect(searchPerfumes('santal')[0]?.id).toBe('ll-santal-33')
+    expect(searchPerfumes('우드세이지')[0]?.id).toBe('jm-wood-sage-sea-salt')
+    expect(searchPerfumes('조말론 피오니')[0]?.id).toBe('jm-peony-blush-suede')
+    expect(searchPerfumes('BLANCHE')[0]?.id).toBe('by-blanche')
+    expect(searchPerfumes('바이레도').length).toBeGreaterThan(2)
+    expect(searchPerfumes('')).toEqual([])
+    expect(searchPerfumes('없는향수이름')).toEqual([])
+  })
+})
+
+describe('기준 향수로 설문 채우기', () => {
+  const withRef = () => {
+    const a = emptyAnswers()
+    a.refPerfumes = ['by-blanche']
+    for (const id of ['aldehydes', 'pink_pepper', 'rose', 'peony', 'violet', 'neroli', 'sandalwood', 'white_musk']) a.notes[id] = 1
+    return a
+  }
+
+  it('기준 향수를 고르면 계열 · 어코드 단계를 채운 것으로 보고 처방이 나온다', () => {
+    const a = withRef()
+    const p = sectionProgress(a)
+    expect(p.total).toBe(STEP_TITLES.length)
+    expect(p.sections[1]).toBe(true)
+    expect(p.sections[4]).toBe(true)
+    expect(p.sections[5]).toBe(true)
+    const r = analyze(a)
+    expect(r.confidence).not.toBe('none')
+    expect(r.family.primary?.id).toBe('musk')
+  })
+
+  it('뺄 노트와 더할 노트를 요약에 적는다', () => {
+    const a = withRef()
+    a.notes.pink_pepper = -1
+    a.notes.vanilla = 1
+    expect(refPerfumeChanges(a)).toMatchObject({ removed: ['핑크 페퍼'], added: ['바닐라'] })
+    const text = formatSummary(a, analyze(a))
+    expect(text).toContain('기준 향수: 바이레도 블랑쉬')
+    expect(text).toContain('뺄 노트: 핑크 페퍼')
+    expect(text).toContain('더할 노트: 바닐라')
+  })
+
+  it('향수가 없다고 고르면 2단계만 채운 것으로 본다', () => {
+    const a = emptyAnswers()
+    a.refNone = true
+    const p = sectionProgress(a)
+    expect(p.sections[1]).toBe(true)
+    expect(p.sections[4]).toBe(false)
   })
 })

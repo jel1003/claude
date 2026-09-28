@@ -11,7 +11,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
 rm -rf "$OUT"
 mkdir -p "$OUT/public/perfume-survey" "$OUT/src/core" "$OUT/netlify/functions"
-cp "$ROOT"/public/perfume-survey/{index.html,admin.html,engine.js} "$OUT/public/perfume-survey/"
+cp "$ROOT"/public/perfume-survey/{index.html,admin.html,engine.js,perfumes.js} "$OUT/public/perfume-survey/"
 cp "$ROOT/src/core/perfumeResponses.ts" "$OUT/src/core/"
 cp "$ROOT/netlify/functions/perfume-responses.mts" "$OUT/netlify/functions/"
 

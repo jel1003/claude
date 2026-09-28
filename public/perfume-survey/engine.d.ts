@@ -26,6 +26,8 @@ export interface Answers {
   families: Record<string, 1 | -1>
   accords: Record<AccordKey, -1 | 0 | 1 | 2>
   notes: Record<string, 1 | -1>
+  refPerfumes: string[]
+  refNone: boolean
   descriptors: Record<string, number>
   moods: string[]
   gender: number | null
@@ -74,3 +76,44 @@ export function recommendConcentration(answers: Answers): Concentration & { reas
 export function sectionProgress(answers: Answers): { done: number; total: number; sections: boolean[] }
 export function analyze(answers: Answers): Result
 export function formatSummary(answers: Answers, result: Result): string
+
+export interface PrescriptionLike {
+  top: string[]
+  middle: string[]
+  base: string[]
+  ratio: Record<Layer, number>
+  concentration: string
+}
+export const STRENGTH_DEFAULT: Record<string, number>
+export const TEST_DROPS_DEFAULT: number
+export function gramsFromDrops(drops: number[], oilG: number): number[]
+export function suggestRecipe(
+  prescription: PrescriptionLike,
+  totalG: number,
+  strengthPct?: number,
+  totalDrops?: number,
+): { strengthPct: number; oilG: number; ingredients: { name: string; layer: Layer; drops: number; grams: number }[] }
+
+export interface Perfume {
+  id: string
+  brand: string
+  brandKo: string
+  name: string
+  nameKo: string
+  family: string
+  top: string[]
+  middle: string[]
+  base: string[]
+  other?: string[]
+  aliases?: string[]
+  check?: boolean
+}
+export const PERFUMES: Perfume[]
+export const perfumeById: Record<string, Perfume>
+export const MAX_REF_PERFUMES: number
+export const STEP_TITLES: string[]
+export function searchPerfumes(query: string, limit?: number): Perfume[]
+export function perfumeNoteIds(p: Perfume): string[]
+export function refPerfumeList(answers: Answers): Perfume[]
+export function skipsTasteSteps(answers: Answers): boolean
+export function refPerfumeChanges(answers: Answers): { perfumes: Perfume[]; removed: string[]; added: string[] }
