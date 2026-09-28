@@ -2,6 +2,7 @@ import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import type { Connect, Plugin, ViteDevServer, PreviewServer } from 'vite'
 import { createMemoryStore, handleSync } from './src/core/syncServer'
+import { createMemoryResponseStore, handlePerfumeResponses } from './src/core/perfumeResponses'
 
 /**
  * 개발 중에 /api/sync 를 띄워주는 플러그인.
@@ -39,8 +40,48 @@ function devSyncApi(): Plugin {
   return { name: 'dev-sync-api', configureServer: mount, configurePreviewServer: mount }
 }
 
+/**
+ * 개발 중에 /api/perfume-responses 를 띄워주는 플러그인 (저장소는 메모리).
+ * 관리자 키는 PERFUME_ADMIN_KEY 환경 변수, 없으면 'dev-admin'.
+ */
+function devPerfumeApi(): Plugin {
+  const store = createMemoryResponseStore()
+  const adminKey = process.env.PERFUME_ADMIN_KEY ?? 'dev-admin'
+
+  const middleware: Connect.NextHandleFunction = (req, res, next) => {
+    if (!req.url?.startsWith('/api/perfume-responses')) return next()
+
+    const chunks: Buffer[] = []
+    req.on('data', (chunk: Buffer) => chunks.push(chunk))
+    req.on('end', () => {
+      const body = Buffer.concat(chunks)
+      const hasBody = !(req.method === 'GET' || req.method === 'HEAD')
+      const request = new Request(`http://local${req.url}`, {
+        method: req.method ?? 'GET',
+        headers: {
+          'content-type': 'application/json',
+          'content-length': String(body.length),
+          authorization: req.headers.authorization ?? '',
+        },
+        ...(hasBody ? { body } : {}),
+      })
+      void handlePerfumeResponses(request, store, adminKey).then(async (response) => {
+        res.statusCode = response.status
+        res.setHeader('content-type', 'application/json; charset=utf-8')
+        res.end(await response.text())
+      })
+    })
+  }
+
+  const mount = (server: ViteDevServer | PreviewServer) => {
+    server.middlewares.use(middleware)
+  }
+
+  return { name: 'dev-perfume-api', configureServer: mount, configurePreviewServer: mount }
+}
+
 export default defineConfig({
-  plugins: [react(), devSyncApi()],
+  plugins: [react(), devSyncApi(), devPerfumeApi()],
   // 서버가 charset 헤더를 안 붙여도 한글이 깨지지 않도록 번들을 ASCII로 낸다
   esbuild: { charset: 'ascii' },
   test: {

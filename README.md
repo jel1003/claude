@@ -124,6 +124,35 @@ npm run build
 npx netlify deploy --prod --dir=dist
 ```
 
+## 조향 상담 설문지 (`/perfume-survey/`)
+
+냉장고 앱과 같은 사이트에 들어가는 별도 페이지입니다. Fragrantica 의 분류(향 계열 12종 · 메인 어코드 29종 ·
+노트 12개 카테고리 · 계절/낮밤/지속력/확산력/성별 이미지 척도)로 취향을 묻고, 답할 때마다 대표 계열 ·
+어코드 막대 · 탑/미들/베이스 노트 · 추천 부향률을 보여줍니다.
+
+- **제출** — 고객이 개인정보 수집에 동의하고 `설문 제출하기`를 누르면 `POST /api/perfume-responses` 로
+  저장되고 접수번호가 나옵니다. 저장소는 Netlify Blobs(`perfume-responses`)입니다.
+- **서버에서 다시 정리** — 모르는 필드는 버리고 허용된 값만 남기며, 처방은 브라우저가 보낸 값을 믿지 않고
+  서버가 다시 계산해서 요약과 함께 저장합니다. 숨은 입력칸으로 단순 스팸 봇을 걸러냅니다.
+- **응답 확인** — `/perfume-survey/admin.html` 에서 관리자 키로 목록을 보고, 요약 복사 · CSV 내려받기를 할 수 있습니다.
+
+**관리자 키 설정**: Netlify 대시보드 → Project configuration → Environment variables 에서
+`PERFUME_ADMIN_KEY` 를 길고 추측하기 어려운 값으로 추가하고 다시 배포하세요. 설정하지 않으면 제출은 되지만
+목록 조회는 막혀 있습니다(503). 로컬 `npm run dev` 에서는 메모리 저장소를 쓰고 키 기본값은 `dev-admin` 입니다.
+
+**설문 전용 사이트**: `scripts/stage-perfume-site.sh <폴더>` 로 설문만 담은 배포 폴더를 만들 수 있습니다.
+그 폴더를 배포하면 설문이 사이트 루트(`/`)에, 응답함이 `/admin.html` 에 옵니다
+(Netlify 프로젝트 `johyang-survey`).
+
+```
+public/perfume-survey/
+  index.html      설문 화면
+  admin.html      응답함 (관리자)
+  engine.js       분류 데이터 · 점수 계산 · 처방 (브라우저와 서버가 같이 씀)
+src/core/perfumeResponses.ts        제출 · 조회 처리, 답변 정리
+netlify/functions/perfume-responses.mts   /api/perfume-responses (Netlify Blobs)
+```
+
 ## 재료·레시피 추가하기
 
 1. `src/data/ingredients.ts`에 재료를 추가합니다. `freshDays`를 적으면 체크할 때 유통기한이 자동으로 채워지고,
