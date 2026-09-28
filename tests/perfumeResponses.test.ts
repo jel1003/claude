@@ -154,6 +154,15 @@ describe('관리자 조회', () => {
 
 })
 
+describe('기준 향수 정리', () => {
+  it('목록에 있는 향수만 최대 3개 남기고, 향수를 골랐으면 refNone 은 끈다', () => {
+    const a = sanitizeAnswers({ refPerfumes: ['by-blanche', 'nope', 'll-santal-33', 'by-blanche', 'di-sauvage', 'ch-no5'], refNone: true })
+    expect(a.refPerfumes).toEqual(['by-blanche', 'll-santal-33', 'di-sauvage'])
+    expect(a.refNone).toBe(false)
+    expect(sanitizeAnswers({ refNone: true }).refNone).toBe(true)
+  })
+})
+
 describe('실제 레시피 기록', () => {
   const recipe = {
     label: '1차 시안',

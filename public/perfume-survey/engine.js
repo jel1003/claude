@@ -11,6 +11,12 @@
  */
 
 /** 메인 어코드. color 는 결과 막대 색. */
+import { PERFUMES, perfumeById, perfumeNoteIds } from './perfumes.js'
+
+export { PERFUMES, perfumeById, perfumeNoteIds, searchPerfumes } from './perfumes.js'
+/** 좋아하는 향수는 최대 몇 개까지 고르나 */
+export const MAX_REF_PERFUMES = 3
+
 export const ACCORDS = [
   { key: 'citrus', ko: '시트러스', en: 'citrus', color: '#E6D43A' },
   { key: 'fresh', ko: '프레시', en: 'fresh', color: '#9BE0E8' },
@@ -289,6 +295,10 @@ export function emptyAnswers() {
     families: {},
     accords: {},
     notes: {},
+    /** 기준으로 고른 향수 id (최대 3개). 고르면 그 향수의 노트가 notes 에 '좋아요'로 채워진다. */
+    refPerfumes: [],
+    /** '기준으로 삼을 향수가 없어요' */
+    refNone: false,
     descriptors: { weight: 0, sweet: 0, sensual: 0, warm: 0, urban: 0 },
     moods: [],
     gender: null,
@@ -349,6 +359,13 @@ export function scoreAccords(answers) {
   const seasons = SEASONS.filter((s) => (answers.seasons ?? []).includes(s.id))
   // 네 계절을 다 고르면 사실상 중립이 되도록 고른 개수로 나눈다
   for (const s of seasons) addWeights(scores, s.accords, 1.2 / seasons.length)
+
+  // 기준 향수의 계열. 계열 · 어코드 단계를 건너뛰어도 방향이 잡히도록 합쳐서 '좋아요' 1.5번만큼 더한다.
+  const refs = refPerfumeList(answers)
+  for (const p of refs) {
+    const fam = familyById[p.family]
+    if (fam && answers.families?.[fam.id] !== -1) addWeights(scores, fam.accords, 1.5 / refs.length)
+  }
 
   const time = DAYTIME.find((t) => t.id === answers.daytime)
   if (time) addWeights(scores, time.accords, 1)
@@ -448,22 +465,50 @@ function rankFamilies(scores, answers) {
         sum += w * Math.max(0, scores[k])
         wsum += w
       }
-      const bonus = answers.families?.[f.id] === 1 ? 1 : 0
+      const bonus = (answers.families?.[f.id] === 1 ? 1 : 0) + (refPerfumeList(answers).some((p) => p.family === f.id) ? 0.6 : 0)
       return { ...f, affinity: sum / wsum + bonus }
     })
     .filter((f) => f.affinity > 0)
     .sort((a, b) => b.affinity - a.affinity)
 }
 
-/** 설문에서 답이 채워진 섹션 수 (8개 중) */
+/** 고른 기준 향수 (목록에 없는 id 는 버린다) */
+export function refPerfumeList(answers) {
+  return (answers.refPerfumes ?? []).map((id) => perfumeById[id]).filter(Boolean)
+}
+
+/** 기준 향수를 골랐으면 계열 · 어코드 단계는 건너뛰어도 된다 */
+export const skipsTasteSteps = (answers) => refPerfumeList(answers).length > 0
+
+/**
+ * 기준 향수에서 고객이 바꾼 점.
+ * removed: 기준 향수에 있지만 '빼 주세요'로 바꾼 노트, added: 기준 향수에 없는데 '좋아요'로 고른 노트.
+ */
+export function refPerfumeChanges(answers) {
+  const perfumes = refPerfumeList(answers)
+  const inRef = new Set(perfumes.flatMap(perfumeNoteIds))
+  const notes = answers.notes ?? {}
+  return {
+    perfumes,
+    removed: [...inRef].filter((id) => notes[id] === -1).map((id) => noteById[id]?.ko).filter(Boolean),
+    added: Object.entries(notes).filter(([id, v]) => v === 1 && !inRef.has(id)).map(([id]) => noteById[id]?.ko).filter(Boolean),
+  }
+}
+
+/** 설문 단계 이름 (화면 순서와 같다) */
+export const STEP_TITLES = ['기본 정보', '좋아하는 향수', '계절·시간', '지속력', '향 계열', '어코드', '노트', '표현', '경험']
+
+/** 설문에서 답이 채워진 섹션 수. 기준 향수를 고르면 계열 · 어코드는 채운 것으로 본다. */
 export function sectionProgress(answers) {
   const d = answers.descriptors ?? {}
+  const skip = skipsTasteSteps(answers)
   const done = [
     Boolean(answers.forWhom || answers.experience || answers.name),
+    skip || Boolean(answers.refNone),
     Boolean((answers.seasons ?? []).length || answers.daytime || (answers.occasions ?? []).length),
     Boolean(answers.longevity || answers.sillage || answers.skin || (answers.concentration && answers.concentration !== 'auto')),
-    Object.keys(answers.families ?? {}).length > 0,
-    Object.values(answers.accords ?? {}).some((v) => v !== 0),
+    skip || Object.keys(answers.families ?? {}).length > 0,
+    skip || Object.values(answers.accords ?? {}).some((v) => v !== 0),
     Object.keys(answers.notes ?? {}).length > 0,
     Object.values(d).some((v) => v !== 0) || (answers.moods ?? []).length > 0 || answers.gender !== null,
     Boolean(answers.lovedPerfumes || answers.dislikedPerfumes || answers.allergies || answers.memo),
@@ -493,7 +538,7 @@ export function analyze(answers) {
 
   const progress = sectionProgress(answers)
   const signal = ranked.length
-  const confidence = signal === 0 ? 'none' : progress.done >= 6 ? 'high' : progress.done >= 3 ? 'mid' : 'low'
+  const confidence = signal === 0 ? 'none' : progress.done >= 7 ? 'high' : progress.done >= 4 ? 'mid' : 'low'
 
   return {
     scores,
@@ -520,6 +565,12 @@ export function formatSummary(answers, result) {
   lines.push(`[조향 상담 요약] ${who}${answers.forWhom === 'gift' ? ' (선물용)' : ''}`)
   if (answers.contact) lines.push(`연락처: ${answers.contact}`)
   lines.push('')
+  const ref = refPerfumeChanges(answers)
+  if (ref.perfumes.length) {
+    lines.push(`기준 향수: ${ref.perfumes.map((p) => `${p.brandKo} ${p.nameKo}`).join(', ')}`)
+    if (ref.removed.length) lines.push(`  └ 뺄 노트: ${ref.removed.join(', ')}`)
+    if (ref.added.length) lines.push(`  └ 더할 노트: ${ref.added.join(', ')}`)
+  }
   if (result.family.primary) {
     const fam = [result.family.primary, result.family.secondary].filter(Boolean).map((f) => `${f.ko} (${f.en})`)
     lines.push(`향 계열: ${fam.join(' → ')}`)
@@ -550,7 +601,6 @@ export function formatSummary(answers, result) {
   return lines.join('\n')
 }
 
-/** 화면의 '예시로 채워보기'용 샘플 응답 */
 /** 농도별 기본 부향률 (중량 %). 실제 레시피 초안에 쓴다. */
 export const STRENGTH_DEFAULT = { edc: 4, edt: 10, edp: 18, extrait: 25 }
 /** 방울 시안 테스트의 기본 총 방울 수 */
@@ -601,6 +651,7 @@ export function suggestRecipe(prescription, totalG, strengthPct, totalDrops = TE
   }
 }
 
+/** 화면의 '예시로 채워보기'용 샘플 응답 */
 export function sampleAnswers() {
   return {
     ...emptyAnswers(),

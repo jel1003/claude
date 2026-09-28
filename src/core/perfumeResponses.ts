@@ -7,8 +7,10 @@ import {
   GENDER,
   MOODS,
   MAX_MOODS,
+  MAX_REF_PERFUMES,
   NOTES,
   OCCASIONS,
+  PERFUMES,
   SEASONS,
   SKIN,
   analyze,
@@ -116,6 +118,7 @@ const noteIds = new Set(NOTES.map((n) => n.id))
 const seasonIds = new Set(SEASONS.map((s) => s.id))
 const occasionIds = new Set(OCCASIONS.map((o) => o.id))
 const moodIds = new Set(MOODS.map((m) => m.id))
+const perfumeIds = new Set(PERFUMES.map((p) => p.id))
 
 /** 알 수 없는 필드는 버리고, 아는 필드는 허용된 값만 남긴다. */
 export function sanitizeAnswers(raw: unknown): Answers {
@@ -135,6 +138,8 @@ export function sanitizeAnswers(raw: unknown): Answers {
   a.families = pickMap(raw.families, familyIds, [1, -1] as const)
   a.accords = pickMap(raw.accords, accordKeys, [-1, 0, 1, 2] as const)
   a.notes = pickMap(raw.notes, noteIds, [1, -1] as const)
+  a.refPerfumes = pickIds(raw.refPerfumes, perfumeIds, MAX_REF_PERFUMES)
+  a.refNone = a.refPerfumes.length === 0 && raw.refNone === true
   const d = isObj(raw.descriptors) ? raw.descriptors : {}
   for (const desc of DESCRIPTORS) a.descriptors[desc.id] = oneOf(d[desc.id], [-2, -1, 0, 1, 2], 0)
   a.moods = pickIds(raw.moods, moodIds, MAX_MOODS)

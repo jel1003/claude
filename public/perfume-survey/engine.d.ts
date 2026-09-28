@@ -26,6 +26,8 @@ export interface Answers {
   families: Record<string, 1 | -1>
   accords: Record<AccordKey, -1 | 0 | 1 | 2>
   notes: Record<string, 1 | -1>
+  refPerfumes: string[]
+  refNone: boolean
   descriptors: Record<string, number>
   moods: string[]
   gender: number | null
@@ -91,3 +93,26 @@ export function suggestRecipe(
   strengthPct?: number,
   totalDrops?: number,
 ): { strengthPct: number; oilG: number; ingredients: { name: string; layer: Layer; drops: number; grams: number }[] }
+
+export interface Perfume {
+  id: string
+  brand: string
+  brandKo: string
+  name: string
+  nameKo: string
+  family: string
+  top: string[]
+  middle: string[]
+  base: string[]
+  other?: string[]
+  aliases?: string[]
+}
+export const PERFUMES: Perfume[]
+export const perfumeById: Record<string, Perfume>
+export const MAX_REF_PERFUMES: number
+export const STEP_TITLES: string[]
+export function searchPerfumes(query: string, limit?: number): Perfume[]
+export function perfumeNoteIds(p: Perfume): string[]
+export function refPerfumeList(answers: Answers): Perfume[]
+export function skipsTasteSteps(answers: Answers): boolean
+export function refPerfumeChanges(answers: Answers): { perfumes: Perfume[]; removed: string[]; added: string[] }
