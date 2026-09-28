@@ -114,13 +114,22 @@ export function sanitizeAnswers(raw: unknown): Answers {
   return a
 }
 
-/** 시간순으로 정렬되는 id: 36진수 밀리초 + 무작위 */
+/**
+ * 접수번호: 한국 시간 기준 날짜 + 숫자 4자리 (예: 260928-4821).
+ * 전화로 불러 주기 쉽게 짧게 했다. 같은 날 겹치면 저장 전에 다시 뽑는다.
+ */
 export function newResponseId(now = Date.now()): string {
-  const rand = Array.from(crypto.getRandomValues(new Uint8Array(5)), (b) => b.toString(36).padStart(2, '0')).join('')
-  return `${now.toString(36).padStart(9, '0')}-${rand}`
+  const kst = new Date(now + 9 * 60 * 60 * 1000)
+  const ymd = [kst.getUTCFullYear() % 100, kst.getUTCMonth() + 1, kst.getUTCDate()].map((n) => String(n).padStart(2, '0')).join('')
+  const serial = crypto.getRandomValues(new Uint32Array(1))[0]! % 10000
+  return `${ymd}-${String(serial).padStart(4, '0')}`
 }
 
-const ID_PATTERN = /^[0-9a-z]{9}-[0-9a-z]{10}$/
+const ID_PATTERN = /^\d{6}-\d{4}$/
+/** 예전 형식(36진수 시각 + 무작위). 이미 저장된 응답을 계속 읽기 위해 남겨 둔다. */
+const LEGACY_ID_PATTERN = /^[0-9a-z]{9}-[0-9a-z]{10}$/
+const isResponseId = (id: string) => ID_PATTERN.test(id) || LEGACY_ID_PATTERN.test(id)
+const MAX_ID_TRIES = 8
 
 export function buildResponse(answers: Answers, id: string, createdAt: string): StoredResponse {
   const r = analyze(answers)
@@ -175,7 +184,8 @@ export async function handlePerfumeResponses(req: Request, store: ResponseStore,
     }
 
     const now = Date.now()
-    const id = newResponseId(now)
+    let id = newResponseId(now)
+    for (let i = 1; i < MAX_ID_TRIES && (await store.get(id).catch(() => null)); i++) id = newResponseId(now)
     const record = buildResponse(answers, id, new Date(now).toISOString())
     try {
       await store.set(id, JSON.stringify(record))
@@ -193,15 +203,20 @@ export async function handlePerfumeResponses(req: Request, store: ResponseStore,
 
     const id = new URL(req.url).searchParams.get('id')
     if (id) {
-      if (!ID_PATTERN.test(id)) return json({ error: 'invalid_id', message: '접수번호 형식이 아닙니다' }, 400)
+      if (!isResponseId(id)) return json({ error: 'invalid_id', message: '접수번호 형식이 아닙니다' }, 400)
       const record = await store.get(id)
       return record ? json({ response: record }) : json({ error: 'not_found', message: '없는 접수번호입니다' }, 404)
     }
 
-    const ids = (await store.list()).filter((x) => ID_PATTERN.test(x)).sort().reverse()
-    const latest = ids.slice(0, LIST_LIMIT)
-    const records = await Promise.all(latest.map((x) => store.get(x).catch(() => null)))
-    return json({ total: ids.length, responses: records.filter(Boolean) })
+    // 접수번호는 날짜까지만 정렬되므로, 경계 날짜의 응답은 모두 읽은 뒤 접수 시각으로 다시 줄 세운다
+    const ids = (await store.list()).filter(isResponseId).sort().reverse()
+    const cutoff = ids[LIST_LIMIT - 1]?.slice(0, 6)
+    const latest = cutoff ? ids.filter((x, i) => i < LIST_LIMIT || x.startsWith(cutoff)) : ids
+    const records = (await Promise.all(latest.map((x) => store.get(x).catch(() => null)))).filter(
+      (r): r is StoredResponse => r !== null,
+    )
+    records.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    return json({ total: ids.length, responses: records.slice(0, LIST_LIMIT) })
   }
 
   return json({ error: 'method_not_allowed', message: 'GET 과 POST 만 받습니다' }, 405)

@@ -34,7 +34,7 @@ describe('설문 응답 제출', () => {
     const store = createMemoryResponseStore()
     const res = await call(post({ answers: sampleAnswers(), consent: true }), store)
     expect(res.status).toBe(201)
-    expect(res.body.id).toMatch(/^[0-9a-z]{9}-[0-9a-z]{10}$/)
+    expect(res.body.id).toMatch(/^\d{6}-\d{4}$/)
     const saved = (await store.get(res.body.id as string)) as StoredResponse
     expect(saved.answers.name).toBe('예시 고객')
     expect(saved.summary).toContain('연락처: 010-0000-0000')
@@ -122,7 +122,24 @@ describe('관리자 조회', () => {
     expect((await call(get('?id=../../etc'), store)).status).toBe(400)
   })
 
-  it('접수번호는 시간순으로 정렬된다', () => {
-    expect(newResponseId(1000) < newResponseId(2000)).toBe(true)
+  it('접수번호는 한국 날짜 + 숫자 4자리이고 날짜순으로 정렬된다', () => {
+    // 2026-09-27 15:30 UTC = 2026-09-28 00:30 KST
+    expect(newResponseId(Date.UTC(2026, 8, 27, 15, 30))).toMatch(/^260928-\d{4}$/)
+    expect(newResponseId(Date.UTC(2026, 8, 27, 14, 59))).toMatch(/^260927-\d{4}$/)
+    expect(newResponseId(Date.UTC(2026, 8, 27)) < newResponseId(Date.UTC(2026, 8, 28))).toBe(true)
   })
+
+  it('예전 형식 접수번호도 계속 조회된다', async () => {
+    const store = createMemoryResponseStore()
+    const legacy = 'mg3k2p1a0-0a1b2c3d4e'
+    await store.set(legacy, JSON.stringify({ id: legacy, createdAt: '2026-01-01T00:00:00.000Z', answers: sampleAnswers() }))
+    await call(post({ answers: sampleAnswers(), consent: true }), store)
+
+    const list = await call(get(), store)
+    const ids = (list.body.responses as StoredResponse[]).map((r) => r.id)
+    expect(ids).toHaveLength(2)
+    expect(ids[1]).toBe(legacy)
+    expect((await call(get(`?id=${legacy}`), store)).status).toBe(200)
+  })
+
 })
