@@ -158,14 +158,15 @@ export function sanitizeRecipes(raw: unknown, now = new Date().toISOString()): C
     .map((r) => ({
       label: text(r.label, 60),
       madeAt: typeof r.madeAt === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(r.madeAt) ? r.madeAt : '',
-      totalG: num(r.totalG, 10000),
+      // volumeMl · amount 는 g 단위로 바꾸기 전 형식
+      totalG: num(r.totalG ?? r.volumeMl, 10000),
       strengthPct: num(r.strengthPct, 100),
       ingredients: (Array.isArray(r.ingredients) ? r.ingredients : [])
         .filter(isObj)
         .map((g) => ({
           name: text(g.name, 80),
           layer: oneOf(g.layer, RECIPE_LAYERS, ''),
-          grams: num(g.grams, 10000),
+          grams: num(g.grams ?? (g.unit === 'g' ? g.amount : 0), 10000),
         }))
         .filter((g) => g.name)
         .slice(0, MAX_INGREDIENTS),

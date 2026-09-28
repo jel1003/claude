@@ -207,4 +207,12 @@ describe('실제 레시피 기록', () => {
     expect(r).not.toHaveProperty('extra')
     expect(sanitizeRecipes('nope')).toEqual([])
   })
+
+  it('예전 형식(ml · 방울)은 g 필드로 옮긴다', () => {
+    const [r] = sanitizeRecipes([
+      { volumeMl: 30, ingredients: [{ name: 'a', amount: 3, unit: 'drop' }, { name: 'b', amount: 1.5, unit: 'g' }] },
+    ])
+    expect(r!.totalG).toBe(30)
+    expect(r!.ingredients.map((g) => g.grams)).toEqual([0, 1.5])
+  })
 })

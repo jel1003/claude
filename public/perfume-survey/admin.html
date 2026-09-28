@@ -157,8 +157,8 @@
       if (!res.ok) throw new Error(body.message || `서버 오류 (${res.status})`)
       try { sessionStorage.setItem(KEY_STORE, key) } catch {}
       responses = body.responses
-      drafts = responses.map((r) => structuredClone(r.recipes ?? []))
       dirty = responses.map(() => false)
+      drafts = responses.map((r, i) => (r.recipes ?? []).map((x) => fromSaved(x, r.prescription, () => { dirty[i] = true })))
       render()
       const more = body.total > responses.length ? ` (전체 ${body.total}개 중 최근 ${responses.length}개)` : ''
       status(`응답 ${responses.length}개${more}`)
@@ -211,6 +211,26 @@
     recipe.ingredients = s.ingredients
     recipe._auto = true
     return recipe
+  }
+
+  /**
+   * 저장된 레시피를 편집용으로 옮긴다. 예전 형식(ml · 방울 단위)은 g 으로 바꾸고,
+   * 양이 하나도 안 적혀 있으면 추천 비율로 채운 뒤 저장 안 된 상태로 표시한다.
+   */
+  function fromSaved(saved, prescription, onFilled) {
+    const x = structuredClone(saved)
+    x.totalG = x.totalG ?? x.volumeMl ?? 0
+    delete x.volumeMl
+    x.ingredients = (x.ingredients ?? []).map((g) => ({
+      name: g.name,
+      layer: g.layer,
+      grams: g.grams ?? (g.unit === 'g' ? g.amount : 0) ?? 0,
+    }))
+    if (x.ingredients.length && x.ingredients.every((g) => !g.grams)) {
+      applySuggestion(x, prescription, true)
+      onFilled()
+    }
+    return x
   }
 
   const newRecipe = (n, prescription) =>
@@ -354,7 +374,7 @@
       const body = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(body.message || `서버 오류 (${res.status})`)
       responses[i] = body.response
-      drafts[i] = structuredClone(body.response.recipes ?? [])
+      drafts[i] = (body.response.recipes ?? []).map((x) => fromSaved(x, body.response.prescription, () => {}))
       dirty[i] = false
       rerenderRecipes(i)
       $(`badge-${i}`).innerHTML = badge(body.response.recipes)
